@@ -1,0 +1,21 @@
+# Environment variables - NEVER commit secrets
+.env
+*.env.*
+
+# Python virtual environment
+venv/
+
+# Python cache and compiled files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Large data files - upload separately to production
+/data
+/tools
+# macOS files
+.DS_Store
+# backups and tool dir
+*.bck
+#
