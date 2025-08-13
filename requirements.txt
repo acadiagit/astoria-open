@@ -6,6 +6,9 @@ langchain-community
 langchain-anthropic
 sentence-transformers
 
+# Cors
+Flask-Cors
+
 # Data & Database
 psycopg2-binary
 supabase
