@@ -4,7 +4,7 @@
 import os
 import logging
 from langchain.agents import AgentExecutor, create_react_agent
-from langchain_community.agent_toolkits import create_sql_agent, SQLDatabaseToolkit # <-- MODIFIED
+from langchain_community.agent_toolkits import SQLDatabaseToolkit
 from langchain_groq import ChatGroq
 from langchain_community.utilities.sql_database import SQLDatabase
 from langchain.tools.retriever import create_retriever_tool
@@ -36,13 +36,10 @@ def create_maritime_agent() -> AgentExecutor:
     )
     db = SQLDatabase.from_uri(db_uri)
 
-    # --- MODIFIED SQL AGENT CREATION ---
     toolkit = SQLDatabaseToolkit(db=db, llm=llm)
     tools = toolkit.get_tools()
     sql_tool = tools[0] # The main query tool
-    # ------------------------------------
 
-    # Create the RAG Retriever Tool
     vector_store = get_vector_store()
     retriever = vector_store.as_retriever()
     retriever_tool = create_retriever_tool(
@@ -51,7 +48,6 @@ def create_maritime_agent() -> AgentExecutor:
         "Use this for queries about historical context, descriptions, events, and interpretive questions."
     )
 
-    # --- UPDATED PROMPT WITH MORE SCHEMA HINTS ---
     prompt_template = """
     You are a helpful maritime history research assistant.
     Your goal is to answer the user's question directly and concisely.
@@ -80,13 +76,11 @@ def create_maritime_agent() -> AgentExecutor:
     Thought:{agent_scratchpad}
     """
     prompt = ChatPromptTemplate.from_template(prompt_template)
-    # --- END OF PROMPT UPDATE ---
 
-    # Combine the tools for the final agent
     all_tools = [sql_tool, retriever_tool]
     agent = create_react_agent(llm, all_tools, prompt)
     agent_executor = AgentExecutor(agent=agent, tools=all_tools, verbose=True)
-    
+
     logger.info("Maritime agent created successfully.")
     return agent_executor
 
