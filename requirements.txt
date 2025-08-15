@@ -5,6 +5,7 @@ langchain
 langchain-community
 langchain-anthropic
 sentence-transformers
+langchain-groq
 
 # Cors
 Flask-Cors
