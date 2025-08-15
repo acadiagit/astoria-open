@@ -1,14 +1,18 @@
-# Stage 1: Build the React Frontend (if you were deploying a UI)
-# For now, we are only deploying the Hub, so this is not needed.
+# Stage 1: Build the React Frontend
+FROM node:18-alpine AS builder
+WORKDIR /app/console
+# Copy only package files first to leverage Docker cache
+COPY console/package.json console/package-lock.json ./
+RUN npm install
+# Copy the rest of the UI source code
+COPY console/ .
+# Build the static files into the /dist folder
+RUN npm run build
 
-# Stage 2: Set up the Python Backend
+# Stage 2: Set up the Python Backend and Serve the Frontend
 FROM python:3.9-slim
 WORKDIR /app
-ENV PYTHONUNBUFFERed=1
-
-# --- NEW LINE: Create and set permissions for the Hugging Face cache ---
-RUN mkdir -p /app/.cache && chown -R 1000:1000 /app/.cache
-# --------------------------------------------------------------------
+ENV PYTHONUNBUFFERED=1
 
 # Copy Python requirements and install
 COPY requirements.txt .
@@ -17,7 +21,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the entire backend application code
 COPY . .
 
-# Expose the port the app will run on (Hugging Face sets this)
+# Copy the built static files from the 'builder' stage into the correct location
+COPY --from=builder /app/console/dist ./console/dist
+
+# Expose the port the app will run on (Hugging Face uses 7860)
 EXPOSE 7860
 
 # The command to start the Gunicorn server
