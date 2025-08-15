@@ -1,6 +1,6 @@
 // Path: /src/utils/api.js
 
-const API_BASE_URL = 'http://localhost:5001';
+const API_BASE_URL = '';
 
 export const getHubStatus = async () => {
   const endpoint = `${API_BASE_URL}/api/v1/status`;
