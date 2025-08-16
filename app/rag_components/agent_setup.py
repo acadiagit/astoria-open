@@ -34,15 +34,7 @@ def create_maritime_agent() -> AgentExecutor:
         port=os.getenv('POSTGRES_PORT'),
         dbname=os.getenv('POSTGRES_DB')
     )
-    
-    # --- MODIFIED: Tell LangChain to read the schema comments ---
-    db = SQLDatabase.from_uri(
-        db_uri,
-        include_tables=['vessels', 'crew', 'voyages'], # Focus the agent on these tables
-        view_support=True,
-        sample_rows_in_table_info=2 # Show the agent 2 sample rows for context
-    )
-    # -----------------------------------------------------------
+    db = SQLDatabase.from_uri(db_uri)
 
     toolkit = SQLDatabaseToolkit(db=db, llm=llm)
     tools = toolkit.get_tools()
@@ -56,10 +48,13 @@ def create_maritime_agent() -> AgentExecutor:
         "Use this for queries about historical context, descriptions, events, and interpretive questions."
     )
 
-    # --- SIMPLIFIED PROMPT (hints are now in the DB) ---
+    # --- CORRECTED PROMPT ---
     prompt_template = """
     You are an expert maritime historian for Machias, Maine, from 1750 to 1920.
     Answer the user's question by using the provided tools.
+
+    You have access to the following tools:
+    {tools}
 
     Use the following format:
 
