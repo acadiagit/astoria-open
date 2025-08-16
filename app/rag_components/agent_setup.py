@@ -34,7 +34,15 @@ def create_maritime_agent() -> AgentExecutor:
         port=os.getenv('POSTGRES_PORT'),
         dbname=os.getenv('POSTGRES_DB')
     )
-    db = SQLDatabase.from_uri(db_uri)
+    
+    # --- MODIFIED: Tell LangChain to read the schema comments ---
+    db = SQLDatabase.from_uri(
+        db_uri,
+        include_tables=['vessels', 'crew', 'voyages'], # Focus the agent on these tables
+        view_support=True,
+        sample_rows_in_table_info=2 # Show the agent 2 sample rows for context
+    )
+    # -----------------------------------------------------------
 
     toolkit = SQLDatabaseToolkit(db=db, llm=llm)
     tools = toolkit.get_tools()
@@ -48,16 +56,10 @@ def create_maritime_agent() -> AgentExecutor:
         "Use this for queries about historical context, descriptions, events, and interpretive questions."
     )
 
+    # --- SIMPLIFIED PROMPT (hints are now in the DB) ---
     prompt_template = """
-    You are a helpful maritime history research assistant.
-    Your goal is to answer the user's question directly and concisely.
-
-    You have access to the following tools:
-    {tools}
-
-    IMPORTANT SCHEMA HINTS:
-    - The 'vessels' table contains a column named 'name' for the vessel's official name.
-    - The 'vessels' table contains a column named 'vessel_type' to describe the type of vessel (e.g., 'schooner').
+    You are an expert maritime historian for Machias, Maine, from 1750 to 1920.
+    Answer the user's question by using the provided tools.
 
     Use the following format:
 
@@ -76,11 +78,12 @@ def create_maritime_agent() -> AgentExecutor:
     Thought:{agent_scratchpad}
     """
     prompt = ChatPromptTemplate.from_template(prompt_template)
+    # --- END OF PROMPT ---
 
     all_tools = [sql_tool, retriever_tool]
     agent = create_react_agent(llm, all_tools, prompt)
     agent_executor = AgentExecutor(agent=agent, tools=all_tools, verbose=True)
-
+    
     logger.info("Maritime agent created successfully.")
     return agent_executor
 
