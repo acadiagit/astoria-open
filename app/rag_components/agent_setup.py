@@ -48,23 +48,21 @@ def create_maritime_agent() -> AgentExecutor:
         "Use this for queries about historical context, descriptions, events, and interpretive questions."
     )
 
-    # --- CORRECTED PROMPT ---
+    # --- SIMPLIFIED AND MORE DIRECT PROMPT ---
     prompt_template = """
-    You are an expert maritime historian for Machias, Maine, from 1750 to 1920.
-    Answer the user's question by using the provided tools.
-
+    You are a helpful maritime history research assistant.
+    Your goal is to answer the user's question directly.
     You have access to the following tools:
     {tools}
 
     Use the following format:
 
     Question: the input question you must answer
-    Thought: you should always think about what to do
+    Thought: You should always think about what to do.
     Action: the action to take, should be one of [{tool_names}]
-    Action Input: the SQL query to execute
+    Action Input: the input to the action
     Observation: the result of the action
-    ... (this Thought/Action/Action Input/Observation can repeat N times)
-    Thought: I now know the final answer
+    Thought: I now know the final answer.
     Final Answer: the final answer to the original input question
 
     Begin!
