@@ -14,6 +14,10 @@ FROM python:3.9-slim
 WORKDIR /app
 ENV PYTHONUNBUFFERED=1
 
+# --- FIX: Create and set permissions for the Hugging Face cache ---
+RUN mkdir -p /app/.cache && chown -R 1000:1000 /app/.cache
+# --------------------------------------------------------------------
+
 # Copy Python requirements and install
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
