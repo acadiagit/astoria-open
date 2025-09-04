@@ -1,0 +1,32 @@
+# Environment variables - NEVER commit secrets
+.env
+*.env.*
+Documentation/
+# Python virtual environment
+venv/
+
+# Python cache and compiled files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pdf
+# Large data files - upload separately to production
+/data
+/tools
+/utils
+# macOS files
+.DS_Store
+# backups and tool dir
+*.bck
+*.bck.*
+#
+
+# Node.js (for the console)
+console/node_modules/
+console/dist/
+npm-debug.log
+
+# IDE/OS specific
+.DS_Store
+.idea/

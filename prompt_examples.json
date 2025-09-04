@@ -1,0 +1,26 @@
+[
+  {
+    "query": "List all the tables in the database.",
+    "sql": "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';"
+  },
+  {
+    "query": "What is the schema of the vessels table?",
+    "sql": "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'vessels';"
+  },
+  {
+    "query": "list 10 ships type schooner",
+    "sql": "SELECT name, vessel_type FROM vessels WHERE vessel_type ILIKE '%schooner%' LIMIT 10"
+  },
+  {
+    "query": "provide all the details of the vessel named FARMER",
+    "sql": "SELECT * FROM vessels WHERE name = 'FARMER' LIMIT 25"
+  },
+  {
+    "query": "Which captain sailed the vessel named ANNIE?",
+    "sql": "SELECT T2.name FROM vessels AS T1 JOIN crew AS T2 ON T1.vessel_id = T2.vessel_id WHERE T1.name = 'ANNIE' AND T2.position = 'Captain' LIMIT 25"
+  },
+  {
+    "query": "How many voyages did each vessel complete?",
+    "sql": "SELECT T1.name, count(T2.voyage_id) AS number_of_voyages FROM vessels AS T1 JOIN voyages AS T2 ON T1.vessel_id = T2.vessel_id GROUP BY T1.name ORDER BY number_of_voyages DESC"
+  }
+]

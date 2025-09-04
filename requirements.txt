@@ -1,0 +1,36 @@
+# Core Frameworks
+Flask
+gunicorn
+langchain
+langchain-community
+langchain-anthropic
+sentence-transformers
+langchain-groq
+langchain-huggingface
+langchain-ollama
+langchain-google-genai
+# Cors
+Flask-Cors
+
+# Data & Database
+psycopg2-binary
+supabase
+pgvector
+
+# UI Build Dependencies (Needed for Docker)
+pypdf
+
+# Utilities
+python-dotenv
+requests
+#
+
+# NL2SQL Pipeline Dependencies
+psycopg2-binary>=2.9.0
+python-dotenv>=1.0.0
+
+# Note: langchain, langchain-community, langchain-groq should already be in your requirements
+# If not, add:
+# langchain>=0.1.0
+# langchain-community>=0.0.20
+# langchain-groq>=0.1.0
