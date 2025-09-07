@@ -3,6 +3,8 @@ title: Astoria Open G
 emoji: ⛵
 colorFrom: blue
 colorTo: green
+sdk: docker
+pinned: false
 ---
 
 # Astoria Open Query Console
