@@ -46,8 +46,14 @@ def create_maritime_agent() -> AgentExecutor:
     toolkit = SQLDatabaseToolkit(db=db, llm=llm)
     tools = toolkit.get_tools()
 
-    # Load the system prompt from the external text file
-    prompt_path = "/Users/hugodiaz/Astoria/hf_spaces/astoria_open/prompts/system_prompt.txt"
+    # --- CORRECTED RELATIVE PATH LOGIC ---
+    # Get the absolute path to the directory where this script is located
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    # Build a relative path to the prompts directory from the script's location
+    # It goes up two levels (from rag_components -> app -> project root) then into prompts
+    prompt_path = os.path.join(script_dir, '..', '..', 'prompts', 'system_prompt.txt')
+
+    # This part of your code remains the same
     with open(prompt_path, "r") as f:
         system_prompt_text = f.read()
     

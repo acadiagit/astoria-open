@@ -1,57 +1,61 @@
 # Filename: main.py
-# Purpose: Main Flask application with a universal, versioned API endpoint.
-# Last Modified: August 28, 2025
+# Purpose: Main FastAPI application with CORS enabled for development.
 
-import logging
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-from dotenv import load_dotenv
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
+from typing import Optional
 
-# Import the core processing function from our service layer
-from app.services.nl_query_service import process_nl_query, _initialize_services
+# --- NEW: Import the CORSMiddleware ---
+from fastapi.middleware.cors import CORSMiddleware
 
-# --- Basic Setup ---
-load_dotenv()
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-app = Flask(__name__)
-CORS(app) # Enable Cross-Origin Resource Sharing
+# Import your service functions
+from app.services.nl_query_service import process_nl_query, check_service_health
 
-# --- API Endpoints (Version 1) ---
+# --- App Setup ---
+app = FastAPI()
 
-@app.route('/api/v1/health', methods=['GET'])
-def health_check():
-    """A simple health check endpoint for any UI's diagnostic button."""
-    return jsonify({'status': 'ok', 'message': 'Astoria backend is running.'})
+# --- NEW: Add CORS Middleware to allow requests from your frontend dev server ---
+origins = [
+    "http://localhost:5173",
+]
 
-@app.route('/api/v1/query', methods=['POST'])
-def query():
-    """Main endpoint to process a natural language query."""
-    data = request.get_json()
-    if not data or 'query' not in data:
-        return jsonify({'status': 'error', 'message': 'JSON body with "query" key is required.'}), 400
-    
-    nl_query = data.get('query')
-    page = data.get('page', 1)
-    
-    try:
-        page = int(page)
-        if page < 1: page = 1
-    except (ValueError, TypeError):
-        page = 1
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"], # Allows all methods (GET, POST, etc.)
+    allow_headers=["*"], # Allows all headers
+)
 
-    result = process_nl_query(nl_query, page=page)
-    
-    return jsonify(result)
 
-# --- Main Application Runner ---
+app.mount("/static", StaticFiles(directory="console/dist/assets"), name="static")
+templates = Jinja2Templates(directory="console/dist")
 
-if __name__ == '__main__':
-    try:
-        _initialize_services()
-        logging.info("All services initialized successfully.")
-    except Exception as e:
-        logging.error(f"FATAL: Could not initialize services on startup: {e}", exc_info=True)
-    
-    app.run(host='0.0.0.0', port=5001, debug=True)
+class QueryRequest(BaseModel):
+    nl_query: str
+    page: int = 1
 
-#--end-of-file
+# --- API Endpoints ---
+@app.post("/api/query")
+async def api_query(request: QueryRequest):
+    return process_nl_query(request.nl_query, request.page)
+
+@app.get("/api/health")
+async def api_health_all():
+    """Returns the status of all external services."""
+    return check_service_health()
+
+@app.get("/api/health/{service_name}")
+async def api_health_specific(service_name: str):
+    """Returns the status of a specific external service."""
+    return check_service_health(service_name=service_name)
+
+# --- Frontend Serving ---
+@app.get("/{full_path:path}", response_class=HTMLResponse)
+async def serve_frontend(request: Request, full_path: str):
+    return templates.TemplateResponse("index.html", {"request": request})
+
+# -- end of file --

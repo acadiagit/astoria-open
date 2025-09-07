@@ -1,7 +1,5 @@
-// Filename: src/utils/api.js
+// Filename: console/src/utils/api.js
 // Purpose: Handles all API calls from the React UI to the Python backend.
-
-const API_BASE_URL = 'http://127.0.0.1:5001/api/v1';
 
 /**
  * Submits a natural language query to the backend.
@@ -9,46 +7,31 @@ const API_BASE_URL = 'http://127.0.0.1:5001/api/v1';
  * @param {number} page The page number for pagination.
  * @returns {Promise<object>} The JSON response from the server.
  */
-export const submitQueryToHub = async (query, page = 1) => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/query`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ query, page }),
+export async function submitQueryToHub(query, page = 1) {
+    // This uses the Vite proxy to send the request to your backend at port 8000
+    const response = await fetch('/api/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nl_query: query, page }), // Match backend expectation
     });
-
     if (!response.ok) {
-      // Try to get a meaningful error from the server's response body
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
     }
-
-    return await response.json();
-  } catch (error) {
-    console.error("API call to /query failed:", error);
-    // Re-throw the error so the component can catch it and display it to the user
-    throw error;
-  }
-};
+    return response.json();
+}
 
 /**
- * Checks the health of the backend server.
- * @returns {Promise<object>} The JSON response from the health endpoint.
+ * Fetches the health status of external services from the backend.
+ * @returns {Promise<object>} The health status object.
  */
-export const getHubStatus = async () => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/health`);
-
+export async function getHubStatus() {
+    // This uses the Vite proxy to send the request to your backend at port 8000
+    const response = await fetch('/api/health');
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
+        throw new Error(`Failed to fetch service status`);
     }
+    return response.json();
+}
 
-    return await response.json();
-  } catch (error) {
-    console.error("API call to /health failed:", error);
-    throw error;
-  }
-};
+// -- end of file --
