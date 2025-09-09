@@ -1,5 +1,5 @@
 // Filename: console/src/App.jsx
-// Final, all-in-one version for the demo.
+// Final version with pre-populated sample queries in the history.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { getHubStatus, submitQueryToHub } from './utils/api';
@@ -28,7 +28,6 @@ function ServiceStatus() {
         updateAllStatuses();
     }, [updateAllStatuses]);
     
-    // ... rendering logic for status ...
     return (
         <div className="status-container">
             <h3>External Service Status <button onClick={updateAllStatuses} disabled={isLoading}>{isLoading ? 'Checking...' : 'Refresh'}</button></h3>
@@ -48,9 +47,21 @@ function ServiceStatus() {
 
 // --- Main Query Console Component Logic ---
 function QueryConsole() {
+  // --- NEW: Define the list of sample queries ---
+  const initialHistory = [
+    { query: "List the names of 4 ships type brig", response: null },
+    { query: "tell me all you know about the ship KODIAK", response: null },
+    { query: "Show me name of the oldest ship", response: null },
+    { query: "list the names of vessels built before 1780", response: null },
+    { query: "List the names of that largest (longest ok) schooners and where they were built", response: null },
+    { query: "show me the names of 10 crew members", response: null },
+    { query: "List 2 voyages for the ship, KODIAK", response: null },
+  ];
+
   const [query, setQuery] = useState('');
   const [response, setResponse] = useState(null);
-  const [history, setHistory] = useState([]);
+  // --- CHANGED: Initialize history state with the sample queries ---
+  const [history, setHistory] = useState(initialHistory);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
