@@ -1,5 +1,5 @@
 # Filename: main.py
-# Purpose: Main FastAPI application with corrected static path mounting.
+# Purpose: Main FastAPI application with corrected code order.
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
@@ -13,8 +13,12 @@ import os
 # Import your service functions
 from app.services.nl_query_service import process_nl_query, check_service_health
 
-# ADD THIS LINE TO DEBUG THE SECRET
+# Debug print for the secret
 print(f'>>> DEBUG: Reading ENABLE_MEMORY_TRACER secret. Value is: "{os.getenv("ENABLE_MEMORY_TRACER")}"')
+
+# --- App Setup ---
+# CRITICAL FIX: 'app' must be defined before it is used by the tracer.
+app = FastAPI()
 
 # --- Memory Tracer Start (Now Configurable) ---
 if os.getenv("ENABLE_MEMORY_TRACER") == "true":
@@ -24,7 +28,7 @@ if os.getenv("ENABLE_MEMORY_TRACER") == "true":
     @app.get("/api/debug/snapshot")
     async def take_memory_snapshot():
         """Takes a snapshot of the current memory allocation."""
-        memory_snapshots.append(tracemalloc.take_snapshot())
+        memory_snapshots.append(tracemacemory_snapshots.append(tracemalloc.take_snapshot())
         return {"status": "success", "snapshot_count": len(memory_snapshots)}
 
     @app.get("/api/debug/compare")
@@ -41,9 +45,6 @@ if os.getenv("ENABLE_MEMORY_TRACER") == "true":
         return {"top_10_memory_diff": results}
 # --- Memory Tracer End ---
 
-# --- App Setup ---
-app = FastAPI()
-
 # Add CORS Middleware for local development
 origins = ["http://localhost:5173"]
 app.add_middleware(
@@ -54,12 +55,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- CORRECTED LINE: Mount the '/assets' path ---
-# This tells FastAPI to serve files from the 'console/dist/assets' directory
-# when the browser requests a URL starting with '/assets'.
+# Mount the '/assets' path
 app.mount("/assets", StaticFiles(directory="console/dist/assets"), name="assets")
 
-# Mount the templates directory for the main HTML file
+# Mount the templates directory
 templates = Jinja2Templates(directory="console/dist")
 
 class QueryRequest(BaseModel):
@@ -80,7 +79,6 @@ async def api_health_specific(service_name: str):
     return check_service_health(service_name=service_name)
 
 # --- Frontend Serving ---
-# This is a "catch-all" route that serves your index.html for any path not already matched.
 @app.get("/{full_path:path}", response_class=HTMLResponse)
 async def serve_frontend(request: Request, full_path: str):
     return templates.TemplateResponse("index.html", {"request": request})
