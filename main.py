@@ -28,7 +28,7 @@ if os.getenv("ENABLE_MEMORY_TRACER") == "true":
     @app.get("/api/debug/snapshot")
     async def take_memory_snapshot():
         """Takes a snapshot of the current memory allocation."""
-        memory_snapshots.append(tracemacemory_snapshots.append(tracemalloc.take_snapshot())
+        memory_snapshots.append(tracemalloc.take_snapshot())
         return {"status": "success", "snapshot_count": len(memory_snapshots)}
 
     @app.get("/api/debug/compare")
