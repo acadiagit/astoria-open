@@ -1,0 +1,114 @@
+# Filename: main.py
+# Purpose: Main FastAPI application with memory and host logging.
+
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
+import tracemalloc
+import os
+import threading
+import time
+import psutil
+
+# Import your service functions
+from app.services.nl_query_service import process_nl_query, check_service_health
+
+# --- Periodic Memory Logger Start ---
+def start_memory_logger():
+    """Starts a background thread to log memory usage every hour."""
+    
+    def log_memory():
+        process = psutil.Process(os.getpid())
+        # RSS: Resident Set Size - the non-swapped physical memory a process has used.
+        memory_mb = process.memory_info().rss / (1024 * 1024)
+        print(f"🧠 MEMORY LOG: Current usage: {memory_mb:.2f} MB")
+
+    def memory_log_worker():
+        while True:
+            log_memory()
+            time.sleep(3600) # Sleep for 1 hour (3600 seconds)
+
+    thread = threading.Thread(target=memory_log_worker, daemon=True)
+    thread.start()
+    print("✅ Memory logger background thread started.")
+
+# Start the logger when the application boots
+start_memory_logger()
+# --- Periodic Memory Logger End ---
+
+# Debug print for the secret
+print(f'>>> DEBUG: Reading ENABLE_MEMORY_TRACER secret. Value is: "{os.getenv("ENABLE_MEMORY_TRACER")}"')
+
+# Debug print for the host
+print(f"✅ Public URL Hostname: {os.getenv('SPACE_HOST')}")
+
+# --- App Setup ---
+app = FastAPI()
+
+# --- Memory Tracer Start (Now Configurable) ---
+if os.getenv("ENABLE_MEMORY_TRACER") == "true":
+    tracemalloc.start()
+    memory_snapshots = []
+
+    @app.get("/api/debug/snapshot")
+    async def take_memory_snapshot():
+        """Takes a snapshot of the current memory allocation."""
+        memory_snapshots.append(tracemalloc.take_snapshot())
+        return {"status": "success", "snapshot_count": len(memory_snapshots)}
+
+    @app.get("/api/debug/compare")
+    async def compare_memory_snapshots():
+        """Compares the last two memory snapshots to find potential leaks."""
+        if len(memory_snapshots) < 2:
+            return {"error": "Not enough snapshots to compare. Please take at least two."}
+        
+        snapshot1 = memory_snapshots[-2]
+        snapshot2 = memory_snapshots[-1]
+        top_stats = snapshot2.compare_to(snapshot1, 'lineno')
+        
+        results = [str(stat) for stat in top_stats[:10]]
+        return {"top_10_memory_diff": results}
+# --- Memory Tracer End ---
+
+# Add CORS Middleware for local development
+origins = ["http://localhost:5173"]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Mount the '/assets' path
+app.mount("/assets", StaticFiles(directory="console/dist/assets"), name="assets")
+
+# Mount the templates directory
+templates = Jinja2Templates(directory="console/dist")
+
+class QueryRequest(BaseModel):
+    nl_query: str
+    page: int = 1
+
+# --- API Endpoints ---
+@app.post("/api/query")
+async def api_query(request: QueryRequest):
+    return process_nl_query(request.nl_query, request.page)
+
+@app.get("/api/health")
+async def api_health_all():
+    return check_service_health()
+
+@app.get("/api/health/{service_name}")
+async def api_health_specific(service_name: str):
+    return check_service_health(service_name=service_name)
+
+# --- Frontend Serving ---
+@app.get("/{full_path:path}", response_class=HTMLResponse)
+async def serve_frontend(request: Request, full_path: str):
+    return templates.TemplateResponse("index.html", {"request": request})
+
+# -- end of file --
