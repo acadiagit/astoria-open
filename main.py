@@ -1,5 +1,5 @@
 # Filename: main.py
-# Purpose: Main FastAPI application with corrected code order.
+# Purpose: Main FastAPI application with host logging.
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
@@ -15,6 +15,9 @@ from app.services.nl_query_service import process_nl_query, check_service_health
 
 # Debug print for the secret
 print(f'>>> DEBUG: Reading ENABLE_MEMORY_TRACER secret. Value is: "{os.getenv("ENABLE_MEMORY_TRACER")}"')
+
+# --- ADD THIS LINE TO LOG THE HOST ---
+print(f"✅ Public URL Hostname: {os.getenv('SPACE_HOST')}")
 
 # --- App Setup ---
 # CRITICAL FIX: 'app' must be defined before it is used by the tracer.
