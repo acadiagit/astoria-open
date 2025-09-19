@@ -40,7 +40,7 @@ def create_maritime_agent() -> AgentExecutor:
     
     db = SQLDatabase.from_uri(
         db_uri,
-        include_tables=['vessels', 'voyages', 'crew', 'maintenance']
+        include_tables=['vessels', 'voyages', 'crew', 'maintenance'],
 	sample_rows_in_table_info=False
     )
     
