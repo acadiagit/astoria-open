@@ -1,5 +1,5 @@
 # Filename: main.py
-# Purpose: Main FastAPI application with host logging.
+# Purpose: Main FastAPI application with all debugging tools implemented.
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
@@ -9,18 +9,43 @@ from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 import tracemalloc
 import os
+import threading
+import time
+import psutil
 
 # Import your service functions
 from app.services.nl_query_service import process_nl_query, check_service_health
 
+# --- Periodic Memory Logger Start ---
+def start_memory_logger():
+    """Starts a background thread to log memory usage every 10 minutes."""
+    
+    def log_memory():
+        process = psutil.Process(os.getpid())
+        # RSS: Resident Set Size - the non-swapped physical memory a process has used.
+        memory_mb = process.memory_info().rss / (1024 * 1024)
+        print(f"🧠 MEMORY LOG: Current usage: {memory_mb:.2f} MB")
+
+    def memory_log_worker():
+        while True:
+            log_memory()
+            time.sleep(600) # Sleep for 10 minutes (600 seconds)
+
+    thread = threading.Thread(target=memory_log_worker, daemon=True)
+    thread.start()
+    print("✅ Memory logger background thread started.")
+
+# Start the logger when the application boots
+start_memory_logger()
+# --- Periodic Memory Logger End ---
+
 # Debug print for the secret
 print(f'>>> DEBUG: Reading ENABLE_MEMORY_TRACER secret. Value is: "{os.getenv("ENABLE_MEMORY_TRACER")}"')
 
-# --- ADD THIS LINE TO LOG THE HOST ---
+# Debug print for the host
 print(f"✅ Public URL Hostname: {os.getenv('SPACE_HOST')}")
 
 # --- App Setup ---
-# CRITICAL FIX: 'app' must be defined before it is used by the tracer.
 app = FastAPI()
 
 # --- Memory Tracer Start (Now Configurable) ---
