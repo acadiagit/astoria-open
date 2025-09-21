@@ -31,4 +31,4 @@ COPY --from=builder /app/console/dist ./console/dist
 EXPOSE 7860
 
 # The command to start the Gunicorn server with the correct Uvicorn worker
-CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:7860", "--timeout", "120", "main:app"]
+CMD ["gunicorn", "--preload", "-k", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:7860", "--timeout", "120", "main:app"]

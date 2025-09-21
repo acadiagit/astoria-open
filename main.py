@@ -1,79 +1,32 @@
 # Filename: main.py
-# Purpose: Main FastAPI application with all debugging tools implemented.
+# Purpose: Main FastAPI application with singleton agent pattern.
 
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
-import tracemalloc
 import os
-import threading
-import time
-import psutil
 
-# Import your service functions
+# Import the agent creation function
+from app.rag_components.agent_setup import create_maritime_agent
+# Import the updated service functions
 from app.services.nl_query_service import process_nl_query, check_service_health
-
-# --- Periodic Memory Logger Start ---
-def start_memory_logger():
-    """Starts a background thread to log memory usage every 10 minutes."""
-    
-    def log_memory():
-        process = psutil.Process(os.getpid())
-        # RSS: Resident Set Size - the non-swapped physical memory a process has used.
-        memory_mb = process.memory_info().rss / (1024 * 1024)
-        print(f"🧠 MEMORY LOG: Current usage: {memory_mb:.2f} MB")
-
-    def memory_log_worker():
-        while True:
-            log_memory()
-            time.sleep(600) # Sleep for 10 minutes (600 seconds)
-
-    thread = threading.Thread(target=memory_log_worker, daemon=True)
-    thread.start()
-    print("✅ Memory logger background thread started.")
-
-# Start the logger when the application boots
-start_memory_logger()
-# --- Periodic Memory Logger End ---
-
-# Debug print for the secret
-print(f'>>> DEBUG: Reading ENABLE_MEMORY_TRACER secret. Value is: "{os.getenv("ENABLE_MEMORY_TRACER")}"')
-
-# Debug print for the host
-print(f"✅ Public URL Hostname: {os.getenv('SPACE_HOST')}")
 
 # --- App Setup ---
 app = FastAPI()
 
-# --- Memory Tracer Start (Now Configurable) ---
-if os.getenv("ENABLE_MEMORY_TRACER") == "true":
-    tracemalloc.start()
-    memory_snapshots = []
+# --- Load Agent on Startup (Singleton Pattern) ---
+@app.on_event("startup")
+async def startup_event():
+    """Create the agent executor only once when the app starts."""
+    print("--- Loading Maritime Agent on startup... ---")
+    # Store the agent in the application's state
+    app.state.agent_executor = create_maritime_agent()
+    print("--- Maritime Agent loaded successfully. ---")
 
-    @app.get("/api/debug/snapshot")
-    async def take_memory_snapshot():
-        """Takes a snapshot of the current memory allocation."""
-        memory_snapshots.append(tracemalloc.take_snapshot())
-        return {"status": "success", "snapshot_count": len(memory_snapshots)}
-
-    @app.get("/api/debug/compare")
-    async def compare_memory_snapshots():
-        """Compares the last two memory snapshots to find potential leaks."""
-        if len(memory_snapshots) < 2:
-            return {"error": "Not enough snapshots to compare. Please take at least two."}
-        
-        snapshot1 = memory_snapshots[-2]
-        snapshot2 = memory_snapshots[-1]
-        top_stats = snapshot2.compare_to(snapshot1, 'lineno')
-        
-        results = [str(stat) for stat in top_stats[:10]]
-        return {"top_10_memory_diff": results}
-# --- Memory Tracer End ---
-
-# Add CORS Middleware for local development
+# Add CORS Middleware
 origins = ["http://localhost:5173"]
 app.add_middleware(
     CORSMiddleware,
@@ -83,10 +36,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount the '/assets' path
+# Mount static files and templates
 app.mount("/assets", StaticFiles(directory="console/dist/assets"), name="assets")
-
-# Mount the templates directory
 templates = Jinja2Templates(directory="console/dist")
 
 class QueryRequest(BaseModel):
@@ -96,7 +47,10 @@ class QueryRequest(BaseModel):
 # --- API Endpoints ---
 @app.post("/api/query")
 async def api_query(request: QueryRequest):
-    return process_nl_query(request.nl_query, request.page)
+    # Retrieve the pre-loaded agent from app.state
+    agent = request.app.state.agent_executor
+    # Pass the agent to the service function
+    return process_nl_query(agent, request.nl_query, request.page)
 
 @app.get("/api/health")
 async def api_health_all():
