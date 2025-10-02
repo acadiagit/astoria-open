@@ -12,6 +12,7 @@ langchain-core==0.3.75
 langchain-groq==0.3.7
 # CORRECTED: Your code uses the Gemini API via genai, not vertexai
 langchain-google-genai
+langchain-google-vertexai
 
 # Vector Database & SQL
 sqlalchemy==2.0.43
