@@ -1,27 +1,26 @@
 # Web Server
 fastapi==0.116.1
 gunicorn==23.0.0
+uvicorn==0.35.0
 uvicorn[standard]
 
 # LangChain Core & Components
 langchain==0.3.27
-langchain-community==0.3.29
 langchain-core==0.3.75
+langchain-community==0.3.29
 
 # LangChain LLM Integrations
 langchain-groq==0.3.7
-# CORRECTED: Your code uses the Gemini API via genai, not vertexai
-langchain-google-genai
+langchain-google-vertexai
 
 # Vector Database & SQL
 sqlalchemy==2.0.43
 psycopg2-binary==2.9.10
 pgvector==0.4.1
 
-# Embeddings
-# ADDED: This is required by your architecture for creating vector embeddings
-sentence-transformers
-
 # Utilities
 python-dotenv==1.1.1
 psutil
+
+# Frontend Dependencies (implicitly handled by Docker build)
+# No need to list react, vite, etc. here

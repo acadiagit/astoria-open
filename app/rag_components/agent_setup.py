@@ -8,60 +8,69 @@ from dotenv import load_dotenv
 from langchain.agents import AgentExecutor, create_openai_tools_agent
 from langchain_community.agent_toolkits import SQLDatabaseToolkit
 from langchain_community.utilities.sql_database import SQLDatabase
-from langchain_groq import ChatGroq
+from langchain_google_vertexai import ChatVertexAI # Corrected: Use Vertex AI for the SQL Agent
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import SystemMessage, HumanMessage
+from sqlalchemy import create_engine
+# Recommended: Import a centralized function for the DB URI
+# from utils.db_utils import get_database_uri 
 
 logger = logging.getLogger(__name__)
 
-def create_maritime_agent() -> AgentExecutor:
-    """
-    Creates the final, specialized SQL agent with a rule-based prompt that
-    is loaded from an external file.
-    """
-    logger.info("--- Creating the specialized SQL agent for the application... ---")
-    load_dotenv()
-
-    llm = ChatGroq(
-        model_name="llama3-70b-8192", 
-        temperature=0,
-        groq_api_key=os.getenv("GROQ_API_KEY"),
-        max_retries=2,
-        request_timeout=30
-    )
-
-    db_uri = "postgresql+psycopg2://{user}:{password}@{host}:{port}/{dbname}".format(
+# Recommended: Define this once in a shared utility file like utils/db_utils.py
+def get_database_uri():
+    """Returns the correctly formatted, stable database URI."""
+    return "postgresql+psycopg2://{user}:{password}@{host}:{port}/{dbname}?sslmode=require".format(
         user=os.getenv('POSTGRES_USER'),
         password=os.getenv('POSTGRES_PASSWORD'),
         host=os.getenv('POSTGRES_HOST'),
         port=os.getenv('POSTGRES_PORT'),
         dbname=os.getenv('POSTGRES_DB')
     )
+
+def create_maritime_agent() -> AgentExecutor:
+    """
+    Creates the final, specialized SQL agent for the application, using Vertex AI
+    and a robust, pooled database connection.
+    """
+    logger.info("--- Creating the specialized SQL agent for the application... ---")
+    load_dotenv()
+
+    # CORRECTED: Use the confirmed-working Vertex AI LLM for the SQL Agent
+    llm = ChatVertexAI(
+        model_name="gemini-2.5-flash", 
+        project=os.getenv("GOOGLE_CLOUD_PROJECT"),
+        location="us-central1",
+        temperature=0,
+    )
+
+    # Use the centralized function to get the database URI
+    db_uri = get_database_uri()
     
-    db = SQLDatabase.from_uri(
+    # Create a robust, pooled engine to prevent connection drops
+    engine = create_engine(
         db_uri,
+        pool_pre_ping=True,  # Checks that connections are alive before use
+        pool_recycle=3600,   # Recycles connections every hour
+    )
+    
+    db = SQLDatabase(
+        engine=engine,
         include_tables=['vessels', 'voyages', 'crew', 'maintenance'],
-	sample_rows_in_table_info=False
+        sample_rows_in_table_info=False
     )
     
     toolkit = SQLDatabaseToolkit(db=db, llm=llm)
     tools = toolkit.get_tools()
 
-    # --- CORRECTED RELATIVE PATH LOGIC ---
-    # Get the absolute path to the directory where this script is located
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    # Build a relative path to the prompts directory from the script's location
-    # It goes up two levels (from rag_components -> app -> project root) then into prompts
     prompt_path = os.path.join(script_dir, '..', '..', 'prompts', 'system_prompt.txt')
 
-    # This part of your code remains the same
     with open(prompt_path, "r") as f:
         system_prompt_text = f.read()
     
-    system_message = SystemMessage(content=system_prompt_text)
-    
     prompt = ChatPromptTemplate.from_messages([
-        system_message,
+        SystemMessage(content=system_prompt_text),
         HumanMessage(content="{input}"),
         MessagesPlaceholder(variable_name="agent_scratchpad"),
     ])
@@ -74,7 +83,7 @@ def create_maritime_agent() -> AgentExecutor:
         verbose=True,
         max_iterations=10,
         handle_parsing_errors=True,
-        return_intermediate_steps=True # Crucial for extracting the SQL query
+        return_intermediate_steps=True
     )
 
     tool_names = [tool.name for tool in agent_executor.tools]
@@ -82,4 +91,4 @@ def create_maritime_agent() -> AgentExecutor:
     
     return agent_executor
 
-#end-of-script
+# -- end of file --

@@ -1,0 +1,57 @@
+https://github.com/AlDanial/cloc has numerous examples and more information.
+(venv) hugodiaz@Mac astoria_open % cloc .
+   29659 text files.
+   28033 unique files.                                          
+    2366 files ignored.
+
+github.com/AlDanial/cloc v 2.06  T=65.57 s (427.6 files/s, 119347.5 lines/s)
+---------------------------------------------------------------------------------------
+Language                             files          blank        comment           code
+---------------------------------------------------------------------------------------
+Python                               14735         969046        1509695        3524964
+C/C++ Header                          9657         124328         130101         566094
+JavaScript                            2207          33987          63143         555865
+Cython                                 138          10835           8167          49605
+TypeScript                             248           5348          38762          42621
+CSV                                     36              0              0          38152
+JSON                                   197              0              0          30374
+Markdown                               191           7802            349          19785
+CUDA                                    65           2783           1879          19176
+YAML                                    17           3397           1023          15532
+C++                                     46           1375            722           8697
+XSLT                                     5            736            518           7665
+CMake                                   31            928           1750           4218
+Text                                   165            648              0           3857
+C                                       56            428            583           3563
+Protocol Buffers                        62            903           5864           1616
+Fortran 90                              53            116             86            892
+Meson                                   23             97            127            845
+reStructuredText                        17            316            305            760
+CSS                                      5            116             85            704
+Windows Module Definition                5             83              0            451
+Fortran 77                              22             26             50            383
+Perl                                    16             54              0            383
+ANTLR Grammar                            2             84             11            335
+Thrift                                   1             58              2            302
+Bourne Shell                             5             71             51            173
+SQL                                      3             22             36            162
+JSX                                      2             15              8            155
+PHP                                      1             13             19            124
+PowerShell                               1             48             89            104
+HTML                                     3              4              0             66
+INI                                      4             14              0             47
+Bourne Again Shell                       2             11              1             43
+Fish Shell                               1             13             13             38
+Dockerfile                               2             15             24             33
+Starlark                                 2              1              0             17
+XML                                      1              0              1             14
+C Shell                                  1              9              5             11
+Fortran 95                               1              0              1              4
+Linker Script                            1              0              5              3
+SVG                                      2              0              0              2
+Unity-Prefab                             1              0              0              2
+---------------------------------------------------------------------------------------
+SUM:                                 28033        1163730        1763475        4897837
+---------------------------------------------------------------------------------------
+(venv) hugodiaz@Mac astoria_open % 
+

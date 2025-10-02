@@ -38,6 +38,8 @@ async def startup_event():
     app.state.agent_executor = create_maritime_agent()
     print("--- Maritime Agent loaded successfully. ---")
 
+# (The rest of the file remains the same)
+# ...
 # --- Memory Tracer (Configurable) ---
 if os.getenv("ENABLE_MEMORY_TRACER") == "true":
     tracemalloc.start()
