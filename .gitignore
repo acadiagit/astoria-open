@@ -30,3 +30,5 @@ npm-debug.log
 # IDE/OS specific
 .DS_Store
 .idea/
+env.txt
+venv/

@@ -56,21 +56,23 @@ class NL2SQLService:
         self.db_connection = db_connection
         self.config = config or {}
         
-        # Initialize core components
         logger.info("Initializing NL2SQL service components...")
         
         self.schema_analyzer = SchemaAnalyzer(db_connection)
         self.complexity_analyzer = ComplexityAnalyzer(self.schema_analyzer)
         
-        # Initialize routing with proper enum handling
-        routing_strategy_name = self.config.get('routing_strategy', 'AUTO_ADAPTIVE')
+        # --- CORRECTED: Use a valid default routing strategy ---
+        DEFAULT_STRATEGY = "HYBRID_PREFER_RULES"
+        routing_strategy_name = self.config.get('routing_strategy', DEFAULT_STRATEGY)
+        
         try:
-            # Try to get the enum value by name
-            routing_strategy = getattr(RoutingStrategy, routing_strategy_name, RoutingStrategy.AUTO_ADAPTIVE)
-        except AttributeError:
-            # Fallback to AUTO_ADAPTIVE if the strategy name is invalid
-            logger.warning(f"Invalid routing strategy '{routing_strategy_name}', using AUTO_ADAPTIVE")
-            routing_strategy = RoutingStrategy.AUTO_ADAPTIVE
+            # Try to get the strategy from the Enum by its name
+            routing_strategy = RoutingStrategy[routing_strategy_name]
+        except KeyError:
+            # If the name is invalid, log a warning and use the safe default
+            logger.warning(f"Invalid routing strategy '{routing_strategy_name}', using default: {DEFAULT_STRATEGY}")
+            routing_strategy = RoutingStrategy[DEFAULT_STRATEGY]
+        # --- END CORRECTION ---
         
         self.query_router = QueryRouter(
             self.complexity_analyzer,
@@ -78,12 +80,10 @@ class NL2SQLService:
             config=self.config.get('routing_config', {})
         )
         
-        # Initialize rule-based components
         self.query_parser = QueryParser(self.schema_analyzer)
         self.sql_generator = SQLGenerator(self.schema_analyzer)
         self.query_optimizer = QueryOptimizer(self.schema_analyzer)
         
-        # Initialize patterns and caching
         self.maritime_patterns = MaritimePatterns()
         cache_config = self.config.get('cache_config', {})
         self.pattern_cache = PatternCache(
@@ -91,12 +91,10 @@ class NL2SQLService:
             ttl_hours=cache_config.get('ttl_hours', 24)
         )
         
-        # Initialize LangChain bridge
         self.langchain_bridge = None
         if langchain_agent_factory:
             self.langchain_bridge = LangChainBridge(langchain_agent_factory)
         
-        # Service statistics
         self.query_count = 0
         self.rule_based_count = 0
         self.llm_count = 0
@@ -107,13 +105,6 @@ class NL2SQLService:
     def process_query(self, nl_query: str, context: Dict[str, Any] = None) -> ProcessingResult:
         """
         Main method to process a natural language query
-        
-        Args:
-            nl_query: Natural language query string
-            context: Optional context for processing
-            
-        Returns:
-            ProcessingResult with complete processing information
         """
         start_time = time.time()
         self.query_count += 1
@@ -121,23 +112,19 @@ class NL2SQLService:
         logger.info(f"Processing query #{self.query_count}: {nl_query[:100]}...")
         
         try:
-            # Step 1: Check cache first
             cached_result = self._check_cache(nl_query)
             if cached_result:
                 return cached_result
             
-            # Step 2: Route query to appropriate processor
             routing_decision = self.query_router.route_query(nl_query, context)
             
-            # Step 3: Process based on routing decision
             if routing_decision.processing_method == "rule_based":
                 result = self._process_rule_based(nl_query, routing_decision)
                 self.rule_based_count += 1
-            else:  # llm_based
+            else:
                 result = self._process_llm_based(nl_query, routing_decision)
                 self.llm_count += 1
             
-            # Step 4: Check if fallback is needed
             if (not result.success and routing_decision.fallback_method and 
                 self.query_router.should_use_fallback(asdict(result), routing_decision)):
                 
@@ -153,7 +140,6 @@ class NL2SQLService:
                     result = fallback_result
                     result.processing_method += "_via_fallback"
             
-            # Step 5: Record performance for adaptive learning
             execution_time = time.time() - start_time
             result.execution_time = execution_time
             
@@ -165,7 +151,6 @@ class NL2SQLService:
                 routing_decision.complexity_metrics
             )
             
-            # Step 6: Cache successful results
             if result.success and self.config.get('caching_enabled', True):
                 self._cache_result(nl_query, result)
             
@@ -207,7 +192,6 @@ class NL2SQLService:
                 confidence=cached_entry.confidence,
                 cached=True
             )
-        
         return None
     
     def _cache_result(self, nl_query: str, result: ProcessingResult):
@@ -228,20 +212,13 @@ class NL2SQLService:
         logger.debug("Processing with rule-based approach")
         
         try:
-            # Step 1: Try pattern matching first
             pattern_match = self.maritime_patterns.match_pattern(nl_query)
             
             if pattern_match and pattern_match.confidence > 0.7:
                 logger.debug(f"Pattern matched: {pattern_match.pattern.name}")
-                
-                # Execute the pattern-generated SQL
                 sql_query = pattern_match.sql_query
                 parameters = pattern_match.parameters
-                
-                # Execute query
                 results = self._execute_sql(sql_query, parameters)
-                
-                # Generate natural language response
                 nl_response = self._generate_nl_response(results, pattern_match.pattern.description)
                 
                 return ProcessingResult(
@@ -255,10 +232,7 @@ class NL2SQLService:
                     confidence=pattern_match.confidence
                 )
             
-            # Step 2: Fall back to general parsing if no pattern matches
             logger.debug("No pattern match, using general parsing")
-            
-            # Parse the query
             intent = self.query_parser.parse(nl_query)
             
             if intent.confidence < 0.5:
@@ -271,16 +245,9 @@ class NL2SQLService:
                     requires_llm_fallback=True
                 )
             
-            # Generate SQL
             generated_sql = self.sql_generator.generate(intent)
-            
-            # Optimize SQL
             optimization_result = self.query_optimizer.optimize(generated_sql.sql)
-            
-            # Execute optimized SQL
             results = self._execute_sql(optimization_result.optimized_sql, generated_sql.parameters)
-            
-            # Generate response
             nl_response = self._generate_nl_response(results, f"Found {len(results) if results else 0} results")
             
             return ProcessingResult(
@@ -297,6 +264,12 @@ class NL2SQLService:
             
         except Exception as e:
             logger.error(f"Rule-based processing failed: {e}")
+            
+            # This is critical. It rolls back the failed transaction,
+            # ensuring the database connection is healthy for the next request.
+            if self.db_connection:
+                self.db_connection.rollback()
+
             return ProcessingResult(
                 success=False,
                 nl_query=nl_query,
@@ -320,16 +293,14 @@ class NL2SQLService:
             )
         
         try:
-            # Use LangChain bridge
             bridge_result = self.langchain_bridge.process_query(nl_query)
             
-            # Convert bridge result to our format
             return ProcessingResult(
                 success=bridge_result.success,
                 nl_query=nl_query,
                 nl_response=bridge_result.nl_response,
                 sql_query=bridge_result.sql_query,
-                results=None,  # LangChain handles execution
+                results=None,
                 processing_method="llm_langchain",
                 execution_time=bridge_result.execution_time,
                 confidence=bridge_result.confidence,
@@ -354,18 +325,14 @@ class NL2SQLService:
         with self.db_connection.cursor() as cursor:
             cursor.execute(sql_query, parameters or [])
             
-            # Handle different query types
             if sql_query.strip().upper().startswith('SELECT'):
                 results = cursor.fetchall()
-                
-                # Convert to list of dictionaries for easier handling
                 if cursor.description:
                     columns = [desc[0] for desc in cursor.description]
                     return [dict(zip(columns, row)) for row in results]
                 else:
                     return results
             else:
-                # For non-SELECT queries
                 return {"affected_rows": cursor.rowcount}
     
     def _generate_nl_response(self, results: Any, context: str = "") -> str:
@@ -415,17 +382,10 @@ class NL2SQLService:
     
     def explain_query(self, nl_query: str) -> Dict[str, Any]:
         """Explain how a query would be processed without executing it"""
-        # Analyze complexity
         complexity_metrics = self.complexity_analyzer.analyze(nl_query)
         complexity_level = self.complexity_analyzer.get_complexity_level(complexity_metrics)
-        
-        # Get routing decision
         routing_decision = self.query_router.route_query(nl_query)
-        
-        # Check for pattern matches
         pattern_match = self.maritime_patterns.match_pattern(nl_query)
-        
-        # Check cache
         cached_entry = self.pattern_cache.get(nl_query)
         
         return {
@@ -457,11 +417,9 @@ class NL2SQLService:
         """Update service configuration"""
         self.config.update(new_config)
         
-        # Update router configuration
         if 'routing_config' in new_config:
             self.query_router.update_config(new_config['routing_config'])
         
-        # Update routing strategy
         if 'routing_strategy' in new_config:
             strategy_name = new_config['routing_strategy']
             try:
@@ -499,26 +457,21 @@ class NL2SQLService:
         }
         
         try:
-            # Test schema analyzer
             schema_summary = self.schema_analyzer.get_schema_summary()
             validation_results['schema_analyzer'] = schema_summary['total_tables'] > 0
             
-            # Test patterns
             pattern_stats = self.maritime_patterns.get_pattern_statistics()
             validation_results['patterns'] = pattern_stats['total_patterns'] > 0
             
-            # Test cache
             cache_stats = self.pattern_cache.get_statistics()
-            validation_results['cache'] = True  # Cache is always functional
+            validation_results['cache'] = True
             
-            # Test LangChain bridge
             if self.langchain_bridge:
                 bridge_validation = self.langchain_bridge.validate_integration()
                 validation_results['langchain_bridge'] = bridge_validation['agent_creation_successful']
                 if not bridge_validation['agent_creation_successful']:
                     validation_results['errors'].extend(bridge_validation['errors'])
             
-            # Overall status
             critical_components = ['schema_analyzer', 'query_parser', 'sql_generator', 'patterns']
             if all(validation_results[comp] for comp in critical_components):
                 validation_results['overall_status'] = 'healthy'
@@ -529,6 +482,5 @@ class NL2SQLService:
             validation_results['overall_status'] = 'error'
             validation_results['errors'].append(f"Validation error: {str(e)}")
         
+#--end-of-file
         return validation_results
-
-#end-of-file

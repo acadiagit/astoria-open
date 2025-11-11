@@ -8,18 +8,15 @@ from dotenv import load_dotenv
 from langchain.agents import AgentExecutor, create_openai_tools_agent
 from langchain_community.agent_toolkits import SQLDatabaseToolkit
 from langchain_community.utilities.sql_database import SQLDatabase
-from langchain_google_vertexai import ChatVertexAI # Corrected: Use Vertex AI for the SQL Agent
+from langchain_google_vertexai import ChatVertexAI
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import SystemMessage, HumanMessage
 from sqlalchemy import create_engine
-# Recommended: Import a centralized function for the DB URI
-# from utils.db_utils import get_database_uri 
 
 logger = logging.getLogger(__name__)
 
-# Recommended: Define this once in a shared utility file like utils/db_utils.py
 def get_database_uri():
-    """Returns the correctly formatted, stable database URI."""
+    """Returns the correctly formatted, stable database URI with SSL required."""
     return "postgresql+psycopg2://{user}:{password}@{host}:{port}/{dbname}?sslmode=require".format(
         user=os.getenv('POSTGRES_USER'),
         password=os.getenv('POSTGRES_PASSWORD'),
@@ -36,22 +33,19 @@ def create_maritime_agent() -> AgentExecutor:
     logger.info("--- Creating the specialized SQL agent for the application... ---")
     load_dotenv()
 
-    # CORRECTED: Use the confirmed-working Vertex AI LLM for the SQL Agent
     llm = ChatVertexAI(
-        model_name="gemini-2.5-flash", 
+        model_name="gemini-1.0-pro", 
         project=os.getenv("GOOGLE_CLOUD_PROJECT"),
         location="us-central1",
         temperature=0,
     )
 
-    # Use the centralized function to get the database URI
     db_uri = get_database_uri()
     
-    # Create a robust, pooled engine to prevent connection drops
     engine = create_engine(
         db_uri,
-        pool_pre_ping=True,  # Checks that connections are alive before use
-        pool_recycle=3600,   # Recycles connections every hour
+        pool_pre_ping=True,
+        pool_recycle=3600,
     )
     
     db = SQLDatabase(
@@ -63,11 +57,24 @@ def create_maritime_agent() -> AgentExecutor:
     toolkit = SQLDatabaseToolkit(db=db, llm=llm)
     tools = toolkit.get_tools()
 
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    prompt_path = os.path.join(script_dir, '..', '..', 'prompts', 'system_prompt.txt')
+    system_prompt_text = """
+    You are an expert maritime history SQL agent. Your goal is to answer questions by generating and executing SQL queries against a PostgreSQL database.
 
-    with open(prompt_path, "r") as f:
-        system_prompt_text = f.read()
+    **Database Schema Context:**
+    - The primary table is `vessels`, which contains information about ships, including `name`, `vessel_type`, and `gross_tonnage`.
+    - The schema does NOT contain columns like `arrival_port`, `departure_port`, or `port_name`. Do not invent these columns.
+    - If you are unsure about the available columns, use the `sql_db_schema` tool first.
+
+    **Querying Rules:**
+    1.  For analytical questions about vessel characteristics (e.g., "most common types," "average tonnage"), you MUST query the `vessels` table.
+    2.  Pay close attention to the user's question to identify the correct columns and calculations needed. For "average tonnage," use the `AVG()` function on the `gross_tonnage` column.
+
+    **IMPORTANT Rule about Ports:**
+    - The user has specified that for this dataset, the only port of relevance is 'Machias'.
+    - If a user's question involves voyages, logs, arrivals, or departures, you MUST assume it relates to 'Machias' and structure your query accordingly, likely by querying a `voyages` table if one exists.
+
+    Given an input question, create a syntactically correct PostgreSQL query, execute it, and use the results to answer the question.
+    """
     
     prompt = ChatPromptTemplate.from_messages([
         SystemMessage(content=system_prompt_text),
@@ -82,13 +89,12 @@ def create_maritime_agent() -> AgentExecutor:
         tools=tools,
         verbose=True,
         max_iterations=10,
-        handle_parsing_errors=True,
+        handle_parsing_errors="Check your SQL query for syntax errors and ensure you are only using columns that exist in the schema.",
         return_intermediate_steps=True
     )
 
     tool_names = [tool.name for tool in agent_executor.tools]
     print(f"✅ Production Agent initialized with tools: {tool_names}")
     
+#--end=of-file--
     return agent_executor
-
-# -- end of file --

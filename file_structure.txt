@@ -1,0 +1,38 @@
+(venv) hugodiaz@Mac astoria_open % ls -la
+total 192
+drwxr-xr-x  32 hugodiaz  staff   1024 Nov  7 14:35 .
+drwxr-xr-x  19 hugodiaz  staff    608 Sep  3 09:29 ..
+-rw-r--r--@  1 hugodiaz  staff  14340 Sep 29 14:05 .DS_Store
+-rw-r--r--   1 hugodiaz  staff   1599 Oct  4 15:58 .env
+drwxr-xr-x  14 hugodiaz  staff    448 Oct  2 13:09 .git
+-rw-r--r--   1 hugodiaz  staff   1519 Sep  7 14:29 .gitattributes
+-rw-r--r--   1 hugodiaz  staff    434 Sep  7 12:16 .gitignore
+drwxr-xr-x   8 hugodiaz  staff    256 Aug 28 09:35 app
+-rw-r--r--   1 hugodiaz  staff   4568 Sep 21 10:21 astoria-cloc.txt
+drwxr-xr-x  18 hugodiaz  staff    576 Sep 18 10:30 console
+drwxr-xr-x   3 hugodiaz  staff     96 Aug 24 15:22 data
+-rw-r--r--   1 hugodiaz  staff    487 Sep 27 14:10 db_maritime_schema.sql.txtq
+-rw-r--r--   1 hugodiaz  staff   1119 Sep 21 11:07 Dockerfile
+-rw-r--r--   1 hugodiaz  staff   1204 Aug 16 14:56 Dockerfile.bck
+drwxr-xr-x  30 hugodiaz  staff    960 Sep 27 17:31 Documentation
+-rw-r--r--   1 hugodiaz  staff   1599 Nov  7 14:35 env.txt
+drwxr-xr-x   2 hugodiaz  staff     64 Sep 24 17:36 ls
+-rw-r--r--   1 hugodiaz  staff   3330 Sep 24 17:32 main-hack.py
+-rw-r--r--   1 hugodiaz  staff   4354 Oct  4 14:31 main.py
+-rw-r--r--   1 hugodiaz  staff   4486 Oct  4 10:16 main.py.bck
+drwxr-xr-x  13 hugodiaz  staff    416 Oct  4 14:20 nl2sql
+-rw-r--r--   1 hugodiaz  staff   1102 Aug 20 16:01 prompt_examples.json
+drwxr-xr-x   4 hugodiaz  staff    128 Sep 24 12:50 prompts
+-rw-r--r--   1 hugodiaz  staff    671 Oct  2 12:30 pyproject.toml
+-rw-r--r--   1 hugodiaz  staff   1318 Sep  7 14:54 README.md
+-rw-r--r--   1 hugodiaz  staff    240 Aug 13 15:20 README.md.bck
+-rw-r--r--   1 hugodiaz  staff    572 Oct  2 13:06 requirements.txt
+-rw-r--r--   1 hugodiaz  staff   2433 Sep 26 12:41 requirements.txt.bck
+drwxr-xr-x   5 hugodiaz  staff    160 Aug 24 15:29 scripts
+drwxr-xr-x   5 hugodiaz  staff    160 Aug 24 14:21 sql
+drwxr-xr-x  20 hugodiaz  staff    640 Oct  4 09:44 utils
+drwxr-xr-x   7 hugodiaz  staff    224 Sep  5 14:07 venv
+## root diretory
+(venv) hugodiaz@Mac astoria_open % pwd
+/Users/hugodiaz/Astoria/hf_spaces/astoria_open
+

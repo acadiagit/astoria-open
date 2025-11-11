@@ -14,11 +14,9 @@ from .query_router import QueryRouter, RoutingDecision, RoutingStrategy
 
 __all__ = [
     'ComplexityAnalyzer',
-    'QueryComplexity', 
+    'QueryComplexity',
     'ComplexityMetrics',
     'QueryRouter',
     'RoutingDecision',
     'RoutingStrategy'
 ]
-
-#end-of-script
