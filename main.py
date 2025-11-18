@@ -1,6 +1,7 @@
 # [main.py]
 # Purpose: Main FastAPI application for the Astoria Open RAG platform.
 # Implements the full SQL + RAG pipeline and serves the React frontend.
+# --- CORRECTED: 11/16/2025 ---
 
 import sys
 import os
@@ -12,14 +13,10 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
-# --- ADD THIS BLOCK TO FIX THE IMPORT PATH ---
-# Ensures 'utils' and 'nl2sql' can be found
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
-# --- END PATH FIX BLOCK ---
-
 # --- RAG IMPORTS ---
 from langchain_groq import ChatGroq
-from langchain_huggingface import HuggingFaceEmbeddings
+#from langchain_huggingface import HuggingFaceEmbeddings #conflicts with google lib
+from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 # --- END RAG IMPORTS ---
@@ -46,7 +43,7 @@ app.add_middleware(
 )
 
 # --- Narrative Synthesis Prompt ---
-# This is the prompt for your "Narrative Synthesizer" (Groq) [cite: 34]
+# [cite_start]This is the prompt for your "Narrative Synthesizer" (Groq) [cite: 34]
 NARRATIVE_SYNTHESIS_TEMPLATE = """
 You are an expert maritime historian. Your task is to synthesize information from two sources:
 1.  A structured data table (SQL Results).
@@ -85,7 +82,7 @@ async def startup_event():
     
     # --- NEW: Load RAG Components ---
     print("--- Loading Embedding Model (SentenceTransformer)... ---")
-    # This is the Embeddings Model from your architecture diagram [cite: 33]
+    # [cite_start]This is the Embeddings Model from your architecture diagram [cite: 33]
     app.state.embedding_model = HuggingFaceEmbeddings(
         model_name="sentence-transformers/all-MiniLM-L6-v2",
         model_kwargs={'device': 'cpu'},
@@ -93,15 +90,15 @@ async def startup_event():
     )
     
     print("--- Loading Vector Store (Supabase)... ---")
-    # This is the Vector Database from your diagram [cite: 32]
+    # [cite_start]This is the Vector Database from your diagram [cite: 32]
     app.state.vector_store = get_vector_store(app.state.embedding_model)
     
     print("--- Loading Narrative Synthesizer (Groq LLM)... ---")
-    # This is the Narrative Synthesizer from your diagram [cite: 34]
+    # [cite_start]This is the Narrative Synthesizer from your diagram [cite: 34]
     app.state.groq_llm = ChatGroq(
         temperature=0, 
         groq_api_key=os.getenv("GROQ_API_KEY"), 
-        model_name="llama3-8b-8192" # Fast and capable model
+        model_name="llama-3.1-8b-instant" # Fast and capable model
     )
     print("--- Services loaded successfully. ---")
     # --- END NEW RAG COMPONENTS ---
@@ -147,7 +144,7 @@ async def api_query(query_data: QueryRequest, request: Request):
     
     # --- STEP 2: Get Vector Data ---
     print("Step 2: Processing Vector Search...")
-    # This is the "simultaneously" step from your diagram [cite: 49]
+    # [cite_start]This is the "simultaneously" step from your diagram [cite: 49]
     try:
         # Find the top 3 most similar documents
         vector_docs = vector_store.similarity_search(nl_query, k=3)
@@ -159,7 +156,7 @@ async def api_query(query_data: QueryRequest, request: Request):
 
     # --- STEP 3: Synthesize Narrative ---
     print("Step 3: Synthesizing final narrative with Groq...")
-    # This is the "Narrative Synthesizer" step [cite: 34]
+    # [cite_start]This is the "Narrative Synthesizer" step [cite: 34]
     
     prompt = ChatPromptTemplate.from_template(NARRATIVE_SYNTHESIS_TEMPLATE)
     
@@ -169,9 +166,14 @@ async def api_query(query_data: QueryRequest, request: Request):
         StrOutputParser()
     )
     
+    # --- FIX: USE OBJECT ATTRIBUTES, NOT DICT .get() ---
+    # We check 'hasattr' to be safe in case an attribute is missing on failure.
+    
+    sql_data_for_prompt = sql_response.results if hasattr(sql_response, "results") and sql_response.results else "No SQL data found."
+    
     final_narrative = synthesis_chain.invoke({
         "question": nl_query,
-        "sql_data": sql_response.get("results", "No SQL data found."), # Use .get for safety
+        "sql_data": sql_data_for_prompt,
         "vector_data": vector_data
     })
     
@@ -179,16 +181,19 @@ async def api_query(query_data: QueryRequest, request: Request):
     
     # --- STEP 4: Return Unified Response ---
     # This response now includes all parts of the RAG pipeline
+    
+    # --- FIX: USE OBJECT ATTRIBUTES, NOT DICT .get() ---
     return {
         "success": True,
         "nl_query": nl_query,
         "nl_response": final_narrative, # The NEW synthesized answer
-        "sql_query": sql_response.get("sql_query"),
-        "sql_results": sql_response.get("results"),
+        "sql_query": sql_response.sql_query if hasattr(sql_response, "sql_query") else None,
+        "sql_results": sql_response.results if hasattr(sql_response, "results") else None,
         "vector_context": vector_data,
-        "processing_method": sql_response.get("processing_method"),
-        "execution_time": sql_response.get("execution_time") # Note: this is just SQL time
+        "processing_method": sql_response.processing_method if hasattr(sql_response, "processing_method") else "unknown",
+        "execution_time": sql_response.execution_time if hasattr(sql_response, "execution_time") else 0.0
     }
+    # --- END FIX ---
 
 # --- Frontend Static File Serving ---
 # This mounts the 'dist' folder from your React build 

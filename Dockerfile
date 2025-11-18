@@ -14,7 +14,9 @@ ENV PYTHONUNBUFFERED=1
 # --- NEW: Explicitly set the Hugging Face cache directory ---
 # This tells libraries to use a writable directory inside our app folder.
 ENV HF_HOME=/app/.cache
+ENV TOKENIZERS_PARALLELISM=false
 
+# ...
 # Create and set permissions for the Hugging Face cache
 RUN mkdir -p /app/.cache && chown -R 1000:1000 /app/.cache
 

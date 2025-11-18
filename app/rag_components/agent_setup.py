@@ -1,6 +1,7 @@
 # Path: astoria_open/app/rag_components/agent_setup.py
 # Filename: agent_setup.py
 # Purpose: Creates the final, production-ready SQL agent for the web application.
+# --- FINAL CORRECTED VERSION: 11/17/2025 ---
 
 import os
 import logging
@@ -8,7 +9,11 @@ from dotenv import load_dotenv
 from langchain.agents import AgentExecutor, create_openai_tools_agent
 from langchain_community.agent_toolkits import SQLDatabaseToolkit
 from langchain_community.utilities.sql_database import SQLDatabase
+
+# --- FIX 1: Import the correct, stable Vertex AI library ---
 from langchain_google_vertexai import ChatVertexAI
+# --- END FIX 1 ---
+
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import SystemMessage, HumanMessage
 from sqlalchemy import create_engine
@@ -27,18 +32,22 @@ def get_database_uri():
 
 def create_maritime_agent() -> AgentExecutor:
     """
-    Creates the final, specialized SQL agent for the application, using Vertex AI
+    Creates the final, specialized SQL agent for the application, using Google Gemini
     and a robust, pooled database connection.
     """
     logger.info("--- Creating the specialized SQL agent for the application... ---")
     load_dotenv()
 
+    # --- FIX 2: Instantiate the correct LLM ---
+    # This uses the stable VertexAI library and authenticates
+    # with your GOOGLE_CLOUD_PROJECT and service account key.
     llm = ChatVertexAI(
-        model_name="gemini-1.0-pro", 
+        model="gemini-2.0-flash",  # The active model we corroborated
         project=os.getenv("GOOGLE_CLOUD_PROJECT"),
-        location="us-central1",
         temperature=0,
+        location="us-east1"      # The valid region we corroborated
     )
+    # --- END FIX 2 ---
 
     db_uri = get_database_uri()
     
@@ -96,5 +105,5 @@ def create_maritime_agent() -> AgentExecutor:
     tool_names = [tool.name for tool in agent_executor.tools]
     print(f"✅ Production Agent initialized with tools: {tool_names}")
     
-#--end=of-file--
+#--end-of-file--
     return agent_executor

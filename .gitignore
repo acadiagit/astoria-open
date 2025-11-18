@@ -1,6 +1,9 @@
 # Environment variables - NEVER commit secrets
 .env
 *.env.*
+gcloud-service-key.json
+*.pem
+*.key
 Documentation/
 # Python virtual environment
 venv/
@@ -30,5 +33,12 @@ npm-debug.log
 # IDE/OS specific
 .DS_Store
 .idea/
+# --- Docker ---
+# If you want to ignore the local build context
+.dockerignore
+
+# --- IDEs ---
+.vscode/
+.idea/
 env.txt
-venv/
+Org Polices.rtf
