@@ -1,0 +1,86 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2822
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\froman\fcharset0 Times-Bold;\f1\froman\fcharset0 Times-Roman;\f2\fmodern\fcharset0 Courier;
+}
+{\colortbl;\red255\green255\blue255;\red0\green0\blue0;}
+{\*\expandedcolortbl;;\cssrgb\c0\c0\c0;}
+{\*\listtable{\list\listtemplateid1\listhybrid{\listlevel\levelnfc0\levelnfcn0\leveljc0\leveljcn0\levelfollow0\levelstartat1\levelspace360\levelindent0{\*\levelmarker \{decimal\}}{\leveltext\leveltemplateid1\'01\'00;}{\levelnumbers\'01;}\fi-360\li720\lin720 }{\listlevel\levelnfc23\levelnfcn23\leveljc0\leveljcn0\levelfollow0\levelstartat1\levelspace360\levelindent0{\*\levelmarker \{circle\}}{\leveltext\leveltemplateid2\'01\uc0\u9702 ;}{\levelnumbers;}\fi-360\li1440\lin1440 }{\listname ;}\listid1}}
+{\*\listoverridetable{\listoverride\listid1\listoverridecount0\ls1}}
+\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\deftab720
+\pard\pardeftab720\sa298\partightenfactor0
+
+\f0\b\fs36 \cf0 \expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 ## Data Flow Explanation\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f1\b0\fs24 \cf0 \strokec2 \
+The 
+\f2\fs26 \strokec2 nl_query_service.py
+\f1\fs24 \strokec2  script acts as the central brain of your backend. Using the data flow chart as our guide, here is how the service orchestrates the entire process after a user submits a query from the\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f0\b \cf0 \strokec2 React UI
+\f1\b0 \strokec2 .\
+\pard\pardeftab720\partightenfactor0
+\cf0 \
+\pard\pardeftab720\sa240\partightenfactor0
+\cf0 \
+\pard\tx220\tx720\pardeftab720\li720\fi-720\sa240\partightenfactor0
+\ls1\ilvl0
+\f0\b \cf0 \kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	1	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 API Endpoint
+\f1\b0 : The request is first received by the 
+\f2\fs26 /api/query
+\f1\fs24  endpoint defined in your 
+\f2\fs26 main.py
+\f1\fs24  file. This endpoint's only job is to pass the user's query to the 
+\f2\fs26 process_nl_query
+\f1\fs24  function within the service.\
+\pard\tx220\tx720\pardeftab720\li720\fi-720\sa240\partightenfactor0
+\ls1\ilvl0\cf0 \kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	2	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 \uc0\u8232 
+\f0\b Intelligent Router
+\f1\b0 : The first step inside the service is the 
+\f0\b Intelligent Router
+\f1\b0 . This component analyzes the user's question to determine its complexity.\uc0\u8232 \u8232 \
+\ls1\ilvl0\kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	3	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 \uc0\u8232 
+\f0\b Path 1: Simple Query
+\f1\b0 : If the router decides the question is simple and direct (e.g., "List 5 ships"), it sends the query to the 
+\f0\b Direct SQL Chain
+\f1\b0 . This chain's role is to use an LLM (like the \uc0\u8232 \u8232 \u8232 
+\f0\b Gemini API
+\f1\b0  ) to convert the question directly into a single, efficient SQL query, which is then executed against the \uc0\u8232 \u8232 \u8232 
+\f0\b PostgreSQL DB
+\f1\b0 .\uc0\u8232 \u8232 \
+\ls1\ilvl0\kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	4	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 \uc0\u8232 
+\f0\b Path 2: Complex Query
+\f1\b0 : If the router decides the question is complex or ambiguous (e.g., "Which type of ship was most common in the 19th century?"), it sends the query to the 
+\f0\b SQL Agent
+\f1\b0 . The agent is a more powerful tool that can reason, explore the database schema, and use multiple tools before generating and executing its final SQL query.\uc0\u8232 \u8232 \
+\pard\tx220\tx720\pardeftab720\li720\fi-720\sa240\partightenfactor0
+\ls1\ilvl0
+\f0\b \cf0 \kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	5	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 Narrative Synthesizer
+\f1\b0 : This is the final step orchestrated by the service. After either Path 1 or Path 2 has returned structured data from the \uc0\u8232 
+\f0\b PostgreSQL DB
+\f1\b0 , the service performs two actions:\uc0\u8232 \u8232 \
+\pard\tx940\tx1440\pardeftab720\li1440\fi-1440\sa240\partightenfactor0
+\ls1\ilvl1\cf0 \kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	\uc0\u9702 	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 It uses the original query to search the \uc0\u8232 
+\f0\b Vector DB
+\f1\b0  for relevant unstructured text (the RAG step).\uc0\u8232 \u8232 \
+\ls1\ilvl1\kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	\uc0\u9702 	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 It sends both the structured data (from SQL) and the unstructured context (from the vector search) to the \uc0\u8232 
+\f0\b Narrative Synthesizer
+\f1\b0 . This component uses a fast LLM (like \uc0\u8232 \u8232 \u8232 
+\f0\b Groq Llama 3
+\f1\b0  ) to weave both sources of information into a single, human-readable narrative.\uc0\u8232 \u8232 \
+\pard\pardeftab720\sa240\partightenfactor0
+\cf0 \strokec2 The service then packages this final narrative and the generated SQL into a JSON response to be displayed by the\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f0\b \cf0 \strokec2 React UI
+\f1\b0 \strokec2 .\
+}

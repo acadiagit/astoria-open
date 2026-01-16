@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CORS Diagnostic Tool</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background-color: #f4f4f4; }
+        .container { background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .result { margin-top: 15px; border: 1px solid #ccc; padding: 10px; white-space: pre-wrap; background-color: #e9ecef; }
+        .success { color: green; font-weight: bold; }
+        .error { color: red; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Astoria Open API Diagnostic</h2>
+        <p>This page sends a raw POST request to the backend to test connectivity and CORS policy.</p>
+        <button id="testButton">Run API Test</button>
+        <div id="status" class="result">Click 'Run API Test' and check your browser's **Console (F12)**.</div>
+        <div id="output" class="result"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:7860/api/query';
+        const QUERY_DATA = { nl_query: 'List 5 schooners' };
+        
+        const statusElement = document.getElementById('status');
+        const outputElement = document.getElementById('output');
+
+        function logStatus(message, className = 'status') {
+            statusElement.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+            statusElement.className = className;
+            console.log(`[STATUS] ${message}`);
+        }
+
+        async function runTest() {
+            logStatus('1. Test started. Checking browser environment...');
+            outputElement.innerText = ''; // Clear previous output
+
+            try {
+                logStatus(`2. Sending POST request to: ${API_URL}`);
+                logStatus(`3. Request Body: ${JSON.stringify(QUERY_DATA)}`);
+
+                // This is the fetch call that often triggers the CORS failure
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(QUERY_DATA)
+                });
+                
+                logStatus('4. Response received from server. Status check...', 'status');
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    logStatus(`!!! FAILED: HTTP Status ${response.status}`, 'error');
+                    outputElement.innerText = `HTTP Error ${response.status}: ${errorText}`;
+                    return;
+                }
+                
+                logStatus('5. Response OK. Parsing JSON...', 'success');
+                const data = await response.json();
+
+                logStatus('6. JSON Parsed. Test Successful!', 'success');
+                outputElement.innerText = 'SUCCESS! See JSON output below.\n\n' + JSON.stringify(data, null, 2);
+                console.log('[SUCCESS] API Response Data:', data);
+
+            } catch (error) {
+                // This block catches the infamous "TypeError: Failed to fetch" (CORS/Network error)
+                logStatus(`!!! CRITICAL FAIL: Network Error! Check browser console for CORS block.`, 'error');
+                outputElement.innerText = `Error Details: ${error.message}\n\n`;
+                outputElement.innerText += `(If the error is 'Failed to fetch', the browser blocked the request due to CORS or network failure.)`;
+                console.error('[CRITICAL FAIL] Full Error Object:', error);
+            } finally {
+                logStatus('7. Test finished.', 'status');
+            }
+        }
+
+        document.getElementById('testButton').addEventListener('click', runTest);
+    </script>
+</body>
+</html>

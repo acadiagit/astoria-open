@@ -1,0 +1,106 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2822
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica-Bold;\f1\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;\red16\green16\blue16;\red255\green255\blue255;}
+{\*\expandedcolortbl;;\cssrgb\c7451\c7451\c7843;\cssrgb\c100000\c100000\c100000;}
+\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\deftab720
+\pard\pardeftab720\partightenfactor0
+
+\f0\b\fs28 \cf2 \cb3 \expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 Document 1: Astoria Open: Technical Architecture Overview (Proof of Concept)
+\f1\b0 \cb1 \
+\pard\pardeftab720\partightenfactor0
+\cf2 \cb3 This document provides a technical overview of the Astoria Open application, presented as a 
+\f0\b Proof of Concept (POC)
+\f1\b0 . It outlines the system's architecture, its design for multi-user access, and its data flow, while setting expectations regarding the current data scope and future expansion plans.\cb1 \
+\pard\pardeftab720\partightenfactor0
+
+\f0\b \cf2 \cb3 1. System Architecture Overview
+\f1\b0  Astoria Open is an advanced conversational AI platform designed to provide a unified, natural language interface to disparate data sources. It combines structured data from traditional SQL databases with unstructured text from document libraries. The application is built on a modern, multi-LLM architecture, with each component specializing in a specific task.\cb1 \
+
+\f0\b \cb3 Core Components:
+\f1\b0 \cb1 \
+\pard\pardeftab720\partightenfactor0
+\cf2 \cb3 \'95 
+\f0\b Frontend UI:
+\f1\b0  A responsive Single-Page Application (SPA) built with React and Vite, running in the user's browser.\cb1 \
+\cb3 \'95 
+\f0\b Backend Server:
+\f1\b0  A high-performance FastAPI application running on a Gunicorn/Uvicorn web server. It exposes the REST API that the frontend communicates with.\cb1 \
+\cb3 \'95 
+\f0\b Intelligent Router (Manual Override Router):
+\f1\b0  A logic layer within the backend that analyzes incoming user queries and routes them to the most appropriate tool\'97either a fast, pattern-based system (Direct SQL Chain) or the more powerful SQL Agent.\cb1 \
+\cb3 \'95 
+\f0\b Direct SQL Chain:
+\f1\b0  The primary tool for simple, factual questions. It uses Google's Gemini API to convert a natural language question directly into an efficient SQL query. In one architecture, a rule-based system is first attempted for conversion to SQL.\cb1 \
+\cb3 \'95 
+\f0\b SQL Agent (The "SQL Architect"):
+\f1\b0  A powerful, autonomous agent, either powered by Google's Gemini API or a local Ollama model (codellama). It is used for complex, ambiguous, or multi-step queries that require reasoning, database exploration (e.g., checking table schemas), and self-correction.\cb1 \
+\cb3 \'95 
+\f0\b Vector Database:
+\f1\b0  A PostgreSQL database supercharged with the pgvector extension and hosted on Supabase. It stores vector embeddings of unstructured text documents for fast semantic search.\cb1 \
+\cb3 \'95 
+\f0\b Embeddings Model:
+\f1\b0  A sentence-transformers model that converts user queries and documents into numerical vectors for storage and comparison in the Vector Database.\cb1 \
+\cb3 \'95 
+\f0\b Narrative Synthesizer (The "Reporter"):
+\f1\b0  A fast Groq-powered Llama 3 model responsible for taking structured results from SQL queries and unstructured context from vector search, then synthesizing them into a cohesive, human-readable narrative.\cb1 \
+\cb3 \'95 
+\f0\b Database (Supabase PostgreSQL):
+\f1\b0  Serves as a dual-purpose data store for both structured, relational vessel data and unstructured vector embeddings.\cb1 \
+\pard\pardeftab720\partightenfactor0
+
+\f0\b \cf2 \cb3 2. How the Application Handles Multiple Users
+\f1\b0  The application is built on a 
+\f0\b standard, scalable web architecture
+\f1\b0  designed for concurrent and efficient handling of multiple users.\cb1 \
+\pard\pardeftab720\partightenfactor0
+\cf2 \cb3 \'95 
+\f0\b Frontend (Each User's Browser):
+\f1\b0  Each user receives an independent copy of the React UI running in their web browser, with UI-specific data like "Query History" stored locally and separately. The only "duplication" is each user's browser downloading frontend code, which is standard for modern websites.\cb1 \
+\cb3 \'95 
+\f0\b Backend (Hugging Face Space):
+\f1\b0  The FastAPI application runs on a Gunicorn web server, designed for concurrency. Gunicorn manages multiple "worker" processes, distributing requests from different users to allow parallel query processing.\cb1 \
+\cb3 \'95 
+\f0\b Shared Resources:
+\f1\b0  There is very little duplication on the server. All users connect to the same Gunicorn server. 
+\f0\b Memory-intensive components
+\f1\b0  such as the Gemini and Groq clients, the SQL agent, and the sentence-transformer embeddings model are loaded into memory 
+\f0\b only once per worker process
+\f1\b0 . This efficient "singleton" pattern ensures these large models are reused for all subsequent user queries, saving memory and improving response time.\cb1 \
+\cb3 \'95 
+\f0\b External Services:
+\f1\b0  Supabase database and Google/Groq LLM APIs are powerful cloud services designed for thousands of simultaneous requests and are not a bottleneck.\cb1 \
+\pard\pardeftab720\partightenfactor0
+
+\f0\b \cf2 \cb3 3. Detailed Data Flow
+\f1\b0  The application's data flow intelligently adapts based on query complexity.\cb1 \
+\pard\pardeftab720\partightenfactor0
+\cf2 \cb3 \'95 
+\f0\b Simple Query Flow (e.g., "List 5 schooners"):
+\f1\b0  The user query goes through the React UI to the FastAPI backend. The Intelligent Router identifies it as simple and passes it to the Direct SQL Chain. Gemini API converts it to SQL, which is executed against PostgreSQL. Simultaneously, the query is vectorized to search the Vector Database for relevant documents. Both structured SQL results and unstructured context are sent to the Narrative Synthesizer (Groq LLM) to generate a final narrative summary, which is then returned to the UI.\cb1 \
+\cb3 \'95 
+\f0\b Complex Query Flow (e.g., "Analyze the most common engine types"):
+\f1\b0  The user query is received, and the Intelligent Router identifies it as complex. It's passed to the SQL Agent (Gemini/codellama), which begins a reasoning process. The Agent might use tools to explore database schemas, formulate, and execute one or more SQL queries. After analyzing results, the Agent formulates a final text-based answer, which the backend sends back to the React UI. One architecture describes the Narrative LLM also synthesizing the results from the SQL agent with vector search results.\cb1 \
+\pard\pardeftab720\partightenfactor0
+
+\f0\b \cf2 \cb3 4. Current Data Scope and Future Expansion (Proof of Concept Expectations)
+\f1\b0  As a 
+\f0\b Proof of Concept
+\f1\b0 , the Astoria Open platform is currently configured for maritime history, with its initial dataset focusing on 
+\f0\b comprehensive maritime logs exclusively from the Port of Machias
+\f1\b0 . This represents a 
+\f0\b subset of data
+\f1\b0  intended to demonstrate the platform's capabilities rather than providing a full-feature product across all historical records.\cb1 \
+\pard\pardeftab720\partightenfactor0
+\cf2 \cb3 The infrastructure, however, is designed to accommodate millions of records and can easily scale to include:\cb1 \
+\cb3 \'95 
+\f0\b Maritime logs from all Maine ports
+\f1\b0 , including their round-trip voyages.\cb1 \
+\cb3 \'95 Historical documents in multiple formats (PDF, text, etc.) and archival materials statewide.\cb1 \
+\cb3 \'95 The platform is built as a 
+\f0\b generic platform adaptable to any data domain
+\f1\b0 . Its core Hub-Spoke architecture is completely data-agnostic. Adaptation involves connecting to new SQL databases, loading new domain-specific documents into the vector database, and updating system prompts to reflect a new domain (e.g., from "maritime historian" to "financial analyst"). The underlying code remains unchanged.\
+\pard\pardeftab720\partightenfactor0
+\cf2 \cb1 \
+}

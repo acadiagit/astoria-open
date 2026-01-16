@@ -1,12 +1,15 @@
 # [main.py]
 # Purpose: Main FastAPI application for the Astoria Open RAG platform.
 # Implements the full SQL + RAG pipeline and serves the React frontend.
-# --- CORRECTED: 11/16/2025 ---
+# --- FINAL PRODUCTION VERSION (UI & Logic Fix): 11/18/2025 ---
 
 import sys
 import os
 import logging
 import tracemalloc
+import threading
+import time
+import psutil
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -15,7 +18,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 # --- RAG IMPORTS ---
 from langchain_groq import ChatGroq
-#from langchain_huggingface import HuggingFaceEmbeddings #conflicts with google lib
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
@@ -26,24 +28,7 @@ from app.rag_components.agent_setup import create_maritime_agent
 from nl2sql.nl2sql_service import NL2SQLService
 from utils.db_utils import get_db_connection, get_vector_store
 
-# --- Force Detailed Logging ---
-logging.basicConfig(stream=sys.stdout, level=logging.INFO)
-
-# --- App Setup ---
-app = FastAPI()
-
-# --- CORS Middleware ---
-# Allows your React frontend (on a different port during dev) to talk to this API
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins
-    allow_credentials=True,
-    allow_methods=["*"],  # Allow all methods
-    allow_headers=["*"],  # Allow all headers
-)
-
-# --- Narrative Synthesis Prompt ---
-# [cite_start]This is the prompt for your "Narrative Synthesizer" (Groq) [cite: 34]
+# --- Narrative Synthesis Prompt (FIXED: Re-inserted missing global variable) ---
 NARRATIVE_SYNTHESIS_TEMPLATE = """
 You are an expert maritime historian. Your task is to synthesize information from two sources:
 1.  A structured data table (SQL Results).
@@ -63,6 +48,80 @@ VECTOR SEARCH RESULTS:
 
 YOUR SYNTHESIZED NARRATIVE:
 """
+# --- END Narrative Synthesis Prompt ---
+
+
+# --- Periodic Memory Logger Start ---
+def start_memory_logger():
+    """Starts a background thread to log memory usage every hour."""
+    
+    def log_memory():
+        process = psutil.Process(os.getpid())
+        # RSS: Resident Set Size - the non-swapped physical memory a process has used.
+        memory_mb = process.memory_info().rss / (1024 * 1024)
+        print(f"🧠 MEMORY LOG: Current usage: {memory_mb:.2f} MB")
+
+    def memory_log_worker():
+        while True:
+            log_memory()
+            time.sleep(3600) # Sleep for 1 hour (3600 seconds)
+
+    thread = threading.Thread(target=memory_log_worker, daemon=True)
+    thread.start()
+    print("✅ Memory logger background thread started.")
+
+# Start the logger when the application boots
+start_memory_logger()
+# --- Periodic Memory Logger End ---
+
+
+# --- Force Detailed Logging ---
+logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+
+# --- App Setup ---
+app = FastAPI()
+
+# --- Memory Tracer Start (Now Configurable) ---
+if os.getenv("ENABLE_MEMORY_TRACER") == "true":
+    tracemalloc.start()
+    memory_snapshots = []
+
+    @app.get("/api/debug/snapshot")
+    async def take_memory_snapshot():
+        """Takes a snapshot of the current memory allocation."""
+        memory_snapshots.append(tracemalloc.take_snapshot())
+        return {"status": "success", "snapshot_count": len(memory_snapshots)}
+
+    @app.get("/api/debug/compare")
+    async def compare_memory_snapshots():
+        """Compares the last two memory snapshots to find potential leaks."""
+        if len(memory_snapshots) < 2:
+            return {"error": "Not enough snapshots to compare. Please take at least two."}
+        
+        snapshot1 = memory_snapshots[-2]
+        snapshot2 = memory_snapshots[-1]
+        top_stats = snapshot2.compare_to(snapshot1, 'lineno')
+        
+        results = [str(stat) for stat in top_stats[:10]]
+        return {"top_10_memory_diff": results}
+# --- Memory Tracer End ---
+
+
+# --- CORS Middleware (FINAL FIX) ---
+# This is the final working CORS configuration.
+origins = [
+    "http://localhost:5173",  # For local Vite development
+    "http://localhost:7860",  # For production (when FastAPI serves the built files)
+    "http://127.0.0.1:7860",  # For robust local host connections
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 # --- Load All Services and Connect Them on Startup ---
 @app.on_event("startup")
@@ -80,9 +139,8 @@ async def startup_event():
         langchain_agent_factory=agent_factory
     )
     
-    # --- NEW: Load RAG Components ---
+    # --- Load RAG Components ---
     print("--- Loading Embedding Model (SentenceTransformer)... ---")
-    # [cite_start]This is the Embeddings Model from your architecture diagram [cite: 33]
     app.state.embedding_model = HuggingFaceEmbeddings(
         model_name="sentence-transformers/all-MiniLM-L6-v2",
         model_kwargs={'device': 'cpu'},
@@ -90,18 +148,16 @@ async def startup_event():
     )
     
     print("--- Loading Vector Store (Supabase)... ---")
-    # [cite_start]This is the Vector Database from your diagram [cite: 32]
     app.state.vector_store = get_vector_store(app.state.embedding_model)
     
     print("--- Loading Narrative Synthesizer (Groq LLM)... ---")
-    # [cite_start]This is the Narrative Synthesizer from your diagram [cite: 34]
     app.state.groq_llm = ChatGroq(
         temperature=0, 
         groq_api_key=os.getenv("GROQ_API_KEY"), 
         model_name="llama-3.1-8b-instant" # Fast and capable model
     )
     print("--- Services loaded successfully. ---")
-    # --- END NEW RAG COMPONENTS ---
+    # --- END RAG COMPONENTS ---
 
 
 @app.on_event("shutdown")
@@ -112,7 +168,6 @@ async def shutdown_event():
         print("--- Database connection closed. ---")
 
 # --- Pydantic Model for API Request ---
-# This class was missing, causing the NameError
 class QueryRequest(BaseModel):
     nl_query: str
     page: int = 1
@@ -121,10 +176,19 @@ class QueryRequest(BaseModel):
 # --- API Endpoints ---
 
 @app.get("/api/health")
-async def check_service_health():
-    """Health check endpoint to verify service is running."""
-    # A simple health check for now
-    return {"status": "ok", "services": ["nl_query_service"]}
+async def api_health_all():
+    """FIXED: Basic internal health check for the core services."""
+    health_status = {
+        "status": "ok",
+        "db_connection": hasattr(app.state, 'db_connection') and app.state.db_connection is not None,
+        "nl2sql_service": hasattr(app.state, 'nl2sql_service') and app.state.nl2sql_service is not None,
+        "vector_store": hasattr(app.state, 'vector_store') and app.state.vector_store is not None,
+        "groq_llm": hasattr(app.state, 'groq_llm') and app.state.groq_llm is not None,
+    }
+    # Determine overall status
+    overall = all(health_status.values())
+    health_status["status"] = "operational" if overall else "degraded"
+    return health_status
 
 
 @app.post("/api/query")
@@ -144,7 +208,6 @@ async def api_query(query_data: QueryRequest, request: Request):
     
     # --- STEP 2: Get Vector Data ---
     print("Step 2: Processing Vector Search...")
-    # [cite_start]This is the "simultaneously" step from your diagram [cite: 49]
     try:
         # Find the top 3 most similar documents
         vector_docs = vector_store.similarity_search(nl_query, k=3)
@@ -154,46 +217,47 @@ async def api_query(query_data: QueryRequest, request: Request):
         print(f"Vector search failed: {e}")
         vector_data = "No vector data found."
 
-    # --- STEP 3: Synthesize Narrative ---
+    # --- STEP 3: Synthesize Narrative (The Final Logic Check) ---
     print("Step 3: Synthesizing final narrative with Groq...")
-    # [cite_start]This is the "Narrative Synthesizer" step [cite: 34]
-    
-    prompt = ChatPromptTemplate.from_template(NARRATIVE_SYNTHESIS_TEMPLATE)
-    
-    synthesis_chain = (
-        prompt |
-        groq_llm |
-        StrOutputParser()
-    )
-    
-    # --- FIX: USE OBJECT ATTRIBUTES, NOT DICT .get() ---
-    # We check 'hasattr' to be safe in case an attribute is missing on failure.
-    
-    sql_data_for_prompt = sql_response.results if hasattr(sql_response, "results") and sql_response.results else "No SQL data found."
-    
-    final_narrative = synthesis_chain.invoke({
-        "question": nl_query,
-        "sql_data": sql_data_for_prompt,
-        "vector_data": vector_data
-    })
+
+    # FIX: If the LLM Agent was used, its final human-readable answer is the response.
+    if sql_response.processing_method == "llm_langchain":
+        # Agent has already synthesized the answer text. Use it directly and skip Groq.
+        final_narrative = sql_response.nl_response
+        sql_data_for_prompt = final_narrative # For display in the final output JSON
+        print("Agent provided final narrative, skipping Groq synthesis.")
+
+    else:
+        # This path is for the Simple Query Flow (always use Groq to synthesize).
+        sql_data_for_prompt = sql_response.results if hasattr(sql_response, "results") and sql_response.results else "No SQL data found."
+
+        prompt = ChatPromptTemplate.from_template(NARRATIVE_SYNTHESIS_TEMPLATE)
+        
+        synthesis_chain = (
+            prompt |
+            groq_llm |
+            StrOutputParser()
+        )
+        
+        final_narrative = synthesis_chain.invoke({
+            "question": nl_query,
+            "sql_data": sql_data_for_prompt,
+            "vector_data": vector_data
+        })
     
     print(f"Final Narrative: {final_narrative}")
     
     # --- STEP 4: Return Unified Response ---
-    # This response now includes all parts of the RAG pipeline
-    
-    # --- FIX: USE OBJECT ATTRIBUTES, NOT DICT .get() ---
     return {
         "success": True,
         "nl_query": nl_query,
-        "nl_response": final_narrative, # The NEW synthesized answer
+        "nl_response": final_narrative, # The NEW synthesized answer (from Agent or Groq)
         "sql_query": sql_response.sql_query if hasattr(sql_response, "sql_query") else None,
         "sql_results": sql_response.results if hasattr(sql_response, "results") else None,
         "vector_context": vector_data,
         "processing_method": sql_response.processing_method if hasattr(sql_response, "processing_method") else "unknown",
         "execution_time": sql_response.execution_time if hasattr(sql_response, "execution_time") else 0.0
     }
-    # --- END FIX ---
 
 # --- Frontend Static File Serving ---
 # This mounts the 'dist' folder from your React build 
@@ -211,4 +275,4 @@ async def read_index():
 async def not_found_handler(request: Request, exc: Exception):
     return FileResponse("console/dist/index.html")
 
-#--end-of-file--
+# -- end of file --

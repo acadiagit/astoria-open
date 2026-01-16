@@ -1,0 +1,227 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2822
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\froman\fcharset0 Times-Roman;\f1\froman\fcharset0 Times-Bold;\f2\fmodern\fcharset0 Courier-Bold;
+\f3\froman\fcharset0 Times-Italic;\f4\fmodern\fcharset0 Courier;}
+{\colortbl;\red255\green255\blue255;\red0\green0\blue0;\red109\green109\blue109;}
+{\*\expandedcolortbl;;\cssrgb\c0\c0\c0;\cssrgb\c50196\c50196\c50196;}
+{\*\listtable{\list\listtemplateid1\listhybrid{\listlevel\levelnfc23\levelnfcn23\leveljc0\leveljcn0\levelfollow0\levelstartat1\levelspace360\levelindent0{\*\levelmarker \{disc\}}{\leveltext\leveltemplateid1\'01\uc0\u8226 ;}{\levelnumbers;}\fi-360\li720\lin720 }{\listname ;}\listid1}
+{\list\listtemplateid2\listhybrid{\listlevel\levelnfc0\levelnfcn0\leveljc0\leveljcn0\levelfollow0\levelstartat1\levelspace360\levelindent0{\*\levelmarker \{decimal\}}{\leveltext\leveltemplateid101\'01\'00;}{\levelnumbers\'01;}\fi-360\li720\lin720 }{\listname ;}\listid2}
+{\list\listtemplateid3\listhybrid{\listlevel\levelnfc0\levelnfcn0\leveljc0\leveljcn0\levelfollow0\levelstartat1\levelspace360\levelindent0{\*\levelmarker \{decimal\}}{\leveltext\leveltemplateid201\'01\'00;}{\levelnumbers\'01;}\fi-360\li720\lin720 }{\listname ;}\listid3}
+{\list\listtemplateid4\listhybrid{\listlevel\levelnfc0\levelnfcn0\leveljc0\leveljcn0\levelfollow0\levelstartat1\levelspace360\levelindent0{\*\levelmarker \{decimal\}}{\leveltext\leveltemplateid301\'01\'00;}{\levelnumbers\'01;}\fi-360\li720\lin720 }{\listname ;}\listid4}}
+{\*\listoverridetable{\listoverride\listid1\listoverridecount0\ls1}{\listoverride\listid2\listoverridecount0\ls2}{\listoverride\listid3\listoverridecount0\ls3}{\listoverride\listid4\listoverridecount0\ls4}}
+\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\deftab720
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f0\fs24 \cf0 \expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 Of course. Here is a concise but detailed architectural overview of the Astoria Open application, suitable for your demo session.\
+\pard\pardeftab720\partightenfactor0
+\cf3 \strokec3 \
+\pard\pardeftab720\sa240\partightenfactor0
+\cf0 \strokec2 \
+\pard\pardeftab720\sa298\partightenfactor0
+
+\f1\b\fs36 \cf0 ## Astoria Open: System Architecture Overview\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f0\b0\fs24 \cf0 \
+Astoria Open is an advanced Natural Language to SQL (NL2SQL) application designed to answer questions about a maritime database. It uses a multi-layered approach, combining fast rule-based systems with powerful Large Language Models (LLMs) to provide accurate, context-aware, and credible narrative answers.\
+\
+\pard\pardeftab720\sa280\partightenfactor0
+
+\f1\b\fs28 \cf0 ### Core Components \uc0\u55358 \u56809 \
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f0\b0\fs24 \cf0 \
+\pard\tx220\tx720\pardeftab720\li720\fi-720\sa240\partightenfactor0
+\ls1\ilvl0
+\f1\b \cf0 \kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	\uc0\u8226 	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 Web Server (Flask)
+\f0\b0 : The backbone of the application, running in 
+\f2\b\fs26 main.py
+\f0\b0\fs24 . It exposes a REST API that the user interface can communicate with.\
+\ls1\ilvl0
+\f1\b \kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	\uc0\u8226 	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 Manual Override Router
+\f0\b0 : The central logic in 
+\f2\b\fs26 nl_query_service.py
+\f0\b0\fs24 . Instead of relying on a single method, it first attempts to answer a query with a fast, pattern-based system. If the query is too complex, it intelligently escalates to the more powerful Text-to-SQL agent.\
+\ls1\ilvl0
+\f1\b \kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	\uc0\u8226 	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 Text-to-SQL Agent (The "SQL Architect")
+\f0\b0 : A 
+\f1\b LangChain SQL Agent
+\f0\b0  powered by a local 
+\f1\b Ollama
+\f0\b0  model (
+\f2\b\fs26 codellama
+\f0\b0\fs24 ). This agent is given a highly specific custom prompt and access to the database's enriched schema (including your descriptive comments), allowing it to write precise PostgreSQL queries for complex questions.\
+\ls1\ilvl0
+\f1\b \kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	\uc0\u8226 	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 Vector Search (The "Researcher")
+\f0\b0 : Uses a 
+\f1\b Hugging Face Sentence Transformer
+\f0\b0  model to convert the user's query into a vector embedding. It then queries a 
+\f1\b Supabase pgvector
+\f0\b0  database to find and retrieve relevant, unstructured documents for added context.\
+\ls1\ilvl0
+\f1\b \kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	\uc0\u8226 	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 Narrative LLM (The "Reporter")
+\f0\b0 : A fast, powerful 
+\f1\b Groq API
+\f0\b0  model (
+\f1\b Llama3
+\f0\b0 ). Its sole job is to synthesize the final answer. It receives the structured data from the SQL query and the unstructured context from the vector search and generates a final, credible, human-readable narrative.\
+\ls1\ilvl0
+\f1\b \kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	\uc0\u8226 	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 Database (Supabase PostgreSQL)
+\f0\b0 : Serves as a dual-purpose data store for both the structured, relational vessel data and the unstructured vector embeddings for semantic search.\
+\pard\pardeftab720\partightenfactor0
+\cf3 \strokec3 \
+\pard\pardeftab720\sa240\partightenfactor0
+\cf0 \strokec2 \
+\pard\pardeftab720\sa298\partightenfactor0
+
+\f1\b\fs36 \cf0 ## Data Flow: Anatomy of a Query\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f0\b0\fs24 \cf0 \
+The application processes a user's question in a sophisticated, multi-stage pipeline to ensure both accuracy and contextual richness.\
+\pard\tx220\tx720\pardeftab720\li720\fi-720\sa240\partightenfactor0
+\ls2\ilvl0\cf0 \kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	1	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 A user submits a natural language question (e.g., 
+\f3\i "tell all you know about vessels type brig"
+\f0\i0 ) to the 
+\f4\fs26 POST /query
+\f0\fs24  API endpoint in 
+\f2\b\fs26 main.py
+\f0\b0\fs24 .\
+\ls2\ilvl0\kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	2	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 The server passes the query to the 
+\f2\b\fs26 process_nl_query
+\f0\b0\fs24  function.\
+\ls2\ilvl0\kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	3	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 The function first attempts a fast, 
+\f1\b rule-based
+\f0\b0  conversion to SQL.\
+\ls2\ilvl0\kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	4	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 The system checks the confidence of the rule-based result. If it's low, the 
+\f1\b manual override
+\f0\b0  invokes the 
+\f2\b\fs26 codellama
+\f1\fs24  SQL Agent
+\f0\b0 .\
+\ls2\ilvl0\kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	5	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 The 
+\f2\b\fs26 codellama
+\f1\fs24  agent
+\f0\b0 , guided by its custom prompt and the database comments, generates and executes a precise PostgreSQL query.\
+\ls2\ilvl0\kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	6	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 In parallel, the user's query is sent to the 
+\f1\b Vector Search
+\f0\b0  component to find relevant documents from the Supabase vector store.\
+\ls2\ilvl0\kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	7	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 The final two pieces of information\'97the 
+\f1\b structured data
+\f0\b0  from the SQL query and the 
+\f1\b unstructured context
+\f0\b0  from the vector search\'97are sent to the 
+\f1\b Groq Llama3
+\f0\b0  model.\
+\ls2\ilvl0\kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	8	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 The 
+\f1\b Narrative LLM
+\f0\b0  synthesizes these inputs into a final, credible answer.\
+\ls2\ilvl0\kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	9	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 A complete JSON object containing the generated SQL, the raw data, and the final narrative is returned to the user's application.\
+\pard\pardeftab720\partightenfactor0
+\cf3 \strokec3 \
+\pard\pardeftab720\sa240\partightenfactor0
+\cf0 \strokec2 \
+\pard\pardeftab720\sa298\partightenfactor0
+
+\f1\b\fs36 \cf0 ## Deployment \uc0\u55357 \u56960 \
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f0\b0\fs24 \cf0 \
+The application is self-contained and designed for straightforward deployment.\
+\
+\pard\pardeftab720\sa280\partightenfactor0
+
+\f1\b\fs28 \cf0 ### Hugging Face Spaces\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f0\b0\fs24 \cf0 \
+Hugging Face Spaces is an excellent platform for hosting demos.\
+\pard\tx220\tx720\pardeftab720\li720\fi-720\sa240\partightenfactor0
+\ls3\ilvl0
+\f1\b \cf0 \kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	1	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 Create a 
+\f2\fs26 requirements.txt
+\f1\fs24  file
+\f0\b0 : From your active virtual environment, run 
+\f4\fs26 pip freeze > requirements.txt
+\f0\fs24 . This lists all necessary Python libraries.\
+\ls3\ilvl0
+\f1\b \kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	2	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 Rename 
+\f2\fs26 main.py
+\f1\fs24  to 
+\f2\fs26 app.py
+\f0\b0\fs24 : Hugging Face Spaces typically looks for a file named 
+\f4\fs26 app.py
+\f0\fs24  to run.\
+\ls3\ilvl0
+\f1\b \kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	3	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 Upload Files
+\f0\b0 : Upload your project to a new Space, ensuring your file structure is preserved (e.g., the 
+\f4\fs26 app/services/
+\f0\fs24  directory).\
+\ls3\ilvl0
+\f1\b \kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	4	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 Use Hugging Face Secrets
+\f0\b0 : Do 
+\f1\b not
+\f0\b0  upload your 
+\f4\fs26 .env
+\f0\fs24  file. Instead, go to your Space's "Settings" page and add your environment variables (like 
+\f4\fs26 POSTGRES_USER
+\f0\fs24 , 
+\f4\fs26 GROQ_API_KEY
+\f0\fs24 , etc.) as 
+\f1\b Secrets
+\f0\b0 . The application will be able to access them securely.\
+\pard\pardeftab720\sa240\partightenfactor0
+\cf0 \
+\pard\pardeftab720\sa280\partightenfactor0
+
+\f1\b\fs28 \cf0 ### Cloning for General Deployment\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f0\b0\fs24 \cf0 \
+To deploy the application on any server that runs Python:\
+\pard\tx220\tx720\pardeftab720\li720\fi-720\sa240\partightenfactor0
+\ls4\ilvl0
+\f1\b \cf0 \kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	1	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 Clone the Repository
+\f0\b0 : 
+\f4\fs26 git clone <your_repository_url>
+\f0\fs24 \
+\ls4\ilvl0
+\f1\b \kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	2	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 Set up Environment
+\f0\b0 : Create a Python virtual environment and install the dependencies: 
+\f4\fs26 pip install -r requirements.txt
+\f0\fs24 .\
+\ls4\ilvl0
+\f1\b \kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	3	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 Configure
+\f0\b0 : Create a 
+\f4\fs26 .env
+\f0\fs24  file in the root directory and add the required database and API key credentials.\
+\ls4\ilvl0
+\f1\b \kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	4	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 Run
+\f0\b0 : Start the application with 
+\f4\fs26 python app.py
+\f0\fs24 .\
+}

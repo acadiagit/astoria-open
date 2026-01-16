@@ -1,44 +1,37 @@
-# Environment variables - NEVER commit secrets
+# --- Secrets & Environment (NEVER COMMIT) ---
 .env
 *.env.*
 gcloud-service-key.json
 *.pem
 *.key
-Documentation/
-# Python virtual environment
-venv/
 
-# Python cache and compiled files
+# --- System & IDE Files ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# --- Python ---
+venv/
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-*.pdf
-# Large data files - upload separately to production
-/data
-/tools
-/utils
-# macOS files
-.DS_Store
-# backups and tool dir
-*.bck
-*.bck.*
-#
 
-# Node.js (for the console)
+# --- Node.js / Frontend ---
+node_modules/
 console/node_modules/
-#console/dist/
 npm-debug.log
+.pnp
+.pnp.js
+coverage/
 
-# IDE/OS specific
-.DS_Store
-.idea/
-# --- Docker ---
-# If you want to ignore the local build context
-.dockerignore
+# --- Build Outputs ---
+# We ignore these because we can always recreate them with "npm run build"
+dist/
+build/
 
-# --- IDEs ---
-.vscode/
-.idea/
-env.txt
-Org Polices.rtf
+# --- Large/Temporary Data ---
+# We are keeping Documentation and Utils!
+# Only ignoring the 'data' folder if it contains massive datasets
+data/

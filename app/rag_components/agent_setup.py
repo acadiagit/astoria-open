@@ -1,7 +1,7 @@
 # Path: astoria_open/app/rag_components/agent_setup.py
 # Filename: agent_setup.py
 # Purpose: Creates the final, production-ready SQL agent for the web application.
-# --- FINAL CORRECTED VERSION: 11/17/2025 ---
+# --- FINAL CORRECTED VERSION (Logic Fix): 11/18/2025 ---
 
 import os
 import logging
@@ -38,9 +38,7 @@ def create_maritime_agent() -> AgentExecutor:
     logger.info("--- Creating the specialized SQL agent for the application... ---")
     load_dotenv()
 
-    # --- FIX 2: Instantiate the correct LLM ---
-    # This uses the stable VertexAI library and authenticates
-    # with your GOOGLE_CLOUD_PROJECT and service account key.
+    # --- FIX 2: Instantiate the correct LLM (Verified Working) ---
     llm = ChatVertexAI(
         model="gemini-2.0-flash",  # The active model we corroborated
         project=os.getenv("GOOGLE_CLOUD_PROJECT"),
@@ -66,6 +64,7 @@ def create_maritime_agent() -> AgentExecutor:
     toolkit = SQLDatabaseToolkit(db=db, llm=llm)
     tools = toolkit.get_tools()
 
+    # --- FIX 3: Corrected Querying Rules for 'Most Common' ---
     system_prompt_text = """
     You are an expert maritime history SQL agent. Your goal is to answer questions by generating and executing SQL queries against a PostgreSQL database.
 
@@ -73,10 +72,12 @@ def create_maritime_agent() -> AgentExecutor:
     - The primary table is `vessels`, which contains information about ships, including `name`, `vessel_type`, and `gross_tonnage`.
     - The schema does NOT contain columns like `arrival_port`, `departure_port`, or `port_name`. Do not invent these columns.
     - If you are unsure about the available columns, use the `sql_db_schema` tool first.
-
+ 
     **Querying Rules:**
-    1.  For analytical questions about vessel characteristics (e.g., "most common types," "average tonnage"), you MUST query the `vessels` table.
-    2.  Pay close attention to the user's question to identify the correct columns and calculations needed. For "average tonnage," use the `AVG()` function on the `gross_tonnage` column.
+    1.  For analytical questions about vessel characteristics, you MUST query the `vessels` table.
+    2. **FREQUENCY & ANALYSIS:** To answer questions about "most common", "popular", or "top" items, you MUST use `COUNT(*)` combined with `GROUP BY` and `ORDER BY` DESC. Example: `SELECT vessel_type, COUNT(*) FROM vessels GROUP BY vessel_type ORDER BY COUNT(*) DESC LIMIT 1`.
+    3. **AVERAGE:** For "average" questions, use the `AVG()` function. 
+    4.  Pay close attention to the user's question to identify the correct columns and calculations needed.
 
     **IMPORTANT Rule about Ports:**
     - The user has specified that for this dataset, the only port of relevance is 'Machias'.
@@ -84,6 +85,7 @@ def create_maritime_agent() -> AgentExecutor:
 
     Given an input question, create a syntactically correct PostgreSQL query, execute it, and use the results to answer the question.
     """
+    # --- END FIX 3 ---
     
     prompt = ChatPromptTemplate.from_messages([
         SystemMessage(content=system_prompt_text),
